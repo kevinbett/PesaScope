@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchTerms } from '../lib/useSearchTerms.js'
 import { fmt, monthOf, monthLbl } from '../lib/format.js'
-import { buildPeople, topSentTo, topReceivedFrom, topMerchants, categoryTotals, habits, search, chargesReport, splitTerms, titleCase, buildIndex, suggest } from '../lib/insights.js'
+import { buildPeople, topSentTo, topReceivedFrom, topMerchants, categoryTotals, habits, search, chargesReport, splitTerms, buildIndex } from '../lib/insights.js'
 import { useTooltip } from './Tooltip.jsx'
 import HBars from './HBars.jsx'
 import FlowChart from './FlowChart.jsx'
@@ -11,47 +12,14 @@ import Habits from './Habits.jsx'
 import SearchResults from './SearchResults.jsx'
 import Charges from './Charges.jsx'
 import Section from './Section.jsx'
-
-function Tiles({ txns, people, onCharges }) {
-  const inn = txns.reduce((s, t) => s + t.paidIn, 0)
-  const out = txns.reduce((s, t) => s + t.withdrawn, 0)
-  const fuliza = txns.filter(t => t.type === 'Fuliza draw').reduce((s, t) => s + t.paidIn, 0)
-  const sentP = people.reduce((s, p) => s + p.sent, 0), recvP = people.reduce((s, p) => s + p.recv, 0)
-  const net = inn - out
-  const tiles = [
-    { lbl: 'Money in', sw: 'zilizoingia', v: fmt(inn), cls: 'pos', sub: 'KES' },
-    { lbl: 'Money out', sw: 'zilizotoka', v: fmt(out), cls: '', sub: 'KES' },
-    { lbl: 'Net', sw: 'salio', v: (net >= 0 ? '+' : '−') + fmt(Math.abs(net)), cls: net >= 0 ? 'pos' : 'negv', sub: 'KES' },
-    { lbl: 'Sent to people', sw: 'ulizotuma', v: fmt(sentP), cls: '', sub: `KES · ${people.filter(p => p.sent > 0).length} people` },
-    { lbl: 'Received from people', sw: 'ulizopokea', v: fmt(recvP), cls: 'pos', sub: `KES · ${people.filter(p => p.recv > 0).length} people` },
-    { lbl: 'Fuliza borrowed', sw: 'deni la Fuliza', v: fmt(fuliza), cls: '', sub: fuliza ? 'KES · ' + txns.filter(t => t.type === 'Fuliza draw').length + ' draws' : 'none this period' },
-  ]
-  return (
-    <div className="tiles">
-      {tiles.map(t => t.onClick ? (
-        <button className="tile tile-btn" key={t.lbl} onClick={t.onClick} title="Jump to the charges breakdown">
-          <div className="lbl">{t.lbl}<span className="sw-lbl">{t.sw}</span></div>
-          <div className={'fig ' + t.cls}>{t.v}</div>
-          {t.sub ? <div className="sub">{t.sub}</div> : null}
-        </button>
-      ) : (
-        <div className="tile" key={t.lbl}>
-          <div className="lbl">{t.lbl}<span className="sw-lbl">{t.sw}</span></div>
-          <div className={'fig ' + t.cls}>{t.v}</div>
-          {t.sub ? <div className="sub">{t.sub}</div> : null}
-        </div>
-      ))}
-    </div>
-  )
-}
+import SearchBox from './SearchBox.jsx'
+import Tiles from './Tiles.jsx'
+import FilterStrip from './FilterStrip.jsx'
 
 export default function Dashboard({ data, isSample, onLoadOwn }) {
   const [monthKey, setMonthKey] = useState('all')
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('')
-  const [sugOpen, setSugOpen] = useState(false)
-  const [sugIdx, setSugIdx] = useState(0)
-  const blurTimer = useRef(null)
   const { showTip, hideTip, tooltipEl } = useTooltip()
   const txnsRef = useRef(null)
   const chargesRef = useRef(null)
@@ -68,60 +36,15 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
   const cats = useMemo(() => categoryTotals(txns), [txns])
   const habitItems = useMemo(() => habits(txns, people), [txns, people])
   const result = useMemo(() => search(txns, q), [txns, q])
-  // type-ahead over the whole statement (not the month slice): the fragment is the text after the last comma
-  const index = useMemo(() => buildIndex(data.txns), [data])
-  const cut = q.lastIndexOf(',')
-  const committed = cut >= 0 ? splitTerms(q.slice(0, cut)) : []
-  const fragment = (cut >= 0 ? q.slice(cut + 1) : q).replace(/^\s+/, '')
-  const labelFor = term => {
-    const d = term.replace(/\D/g, '').replace(/^(?:254|0)/, '')
-    const hit = d.length >= 6 ? index.find(e => e.kind === 'person' && e.value.replace(/\D/g, '').endsWith(d)) : null
-    return hit ? titleCase(hit.label) + ' · ' + hit.value : (/^\d/.test(term) ? term : titleCase(term))
-  }
-  // on commit, a full name that is exactly one person becomes that person's phone —
-  // chips then stand for identities, so a name and its number can never both appear
-  const canon = term => {
-    const k = term.toLowerCase().replace(/[^a-z0-9]/g, '')
-    if (!k || /^\d/.test(k)) return term
-    const hits = index.filter(e => e.kind === 'person' && e.label.toLowerCase().replace(/[^a-z0-9]/g, '') === k)
-    return hits.length === 1 ? hits[0].value : term
-  }
-  const setParts = (terms, frag) => { const t = splitTerms(terms.map(canon).join(', ')); setQ(t.length ? t.join(', ') + ', ' + frag : frag) }
-  const removeChip = i => setParts(committed.filter((_, j) => j !== i), fragment)
-  // typing (or pasting) commas in the field commits everything before the last comma
-  const onType = v => {
-    const c = v.lastIndexOf(',')
-    if (c < 0) return setParts(committed, v)
-    setParts([...committed, ...v.slice(0, c).split(',')], v.slice(c + 1).replace(/^\s+/, ''))
-  }
-  const sugs = useMemo(() => (sugOpen ? suggest(index, fragment) : []), [index, fragment, sugOpen])
-  // a chosen suggestion becomes a committed chip, ready for the next term
-  const applySuggestion = e => {
-    setParts([...committed, e.value], '')
-    setSugOpen(false); setSugIdx(0)
-  }
-  const onSearchKey = ev => {
-    if (ev.key === 'Backspace' && !fragment && committed.length) { ev.preventDefault(); removeChip(committed.length - 1); return }
-    if (!sugs.length) { if (ev.key === 'Escape') setSugOpen(false); return }
-    if (ev.key === 'ArrowDown') { ev.preventDefault(); setSugIdx(i => (i + 1) % sugs.length) }
-    else if (ev.key === 'ArrowUp') { ev.preventDefault(); setSugIdx(i => (i - 1 + sugs.length) % sugs.length) }
-    else if (ev.key === 'Enter') { ev.preventDefault(); applySuggestion(sugs[sugIdx]) }
-    else if (ev.key === 'Escape') { setSugOpen(false) }
-  }
+  const index = useMemo(() => buildIndex(data.txns), [data])   // type-ahead over the whole statement, not the month slice
+  const terms = useSearchTerms(q, setQ, index)
   const charges = useMemo(() => chargesReport(txns), [txns])
   const catTotal = cats.out.reduce((s, [, v]) => s + v, 0) || 1
 
   useEffect(() => { setCat('') }, [q])
-  useEffect(() => {
-    const onKey = e => {
-      if (e.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) { e.preventDefault(); document.querySelector('.searchbar input')?.focus() }
-    }
-    window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey)
-  }, [])
 
   const pick = p => { setQ(p.phone || p.name || p.key); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const pickCat = c => { setCat(c); txnsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
-  const goCharges = () => chargesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   const jump = id => {
     if (id === 'overview') return window.scrollTo({ top: 0, behavior: 'smooth' })
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -132,11 +55,7 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
 
   // everything currently narrowing the view, each removable on its own
   const active = [
-    ...splitTerms(q).map(term => {
-      const d = term.replace(/\D/g, '').replace(/^(?:254|0)/, '')
-      const hit = d.length >= 6 ? index.find(e => e.kind === 'person' && e.value.replace(/\D/g, '').endsWith(d)) : null
-      return { key: 'q:' + term, label: hit ? titleCase(hit.label) + ' · ' + hit.value : (/^\d/.test(term) ? term : titleCase(term)), clear: () => setQ(splitTerms(q).filter(t => t !== term).join(', ')) }
-    }),
+    ...splitTerms(q).map(term => ({ key: 'q:' + term, label: terms.labelFor(term), clear: () => terms.removeTerm(term) })),
     monthKey !== 'all' ? { key: 'm', label: monthLbl(monthKey), clear: () => setMonthKey('all') } : null,
     cat ? { key: 'c', label: cat, clear: () => setCat('') } : null,
   ].filter(Boolean)
@@ -165,60 +84,9 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
         </div>
       )}
 
-      <div className={'searchbar' + (q ? ' active' : '') + (committed.length ? ' has-tokens' : '')} onClick={e => { if (e.target === e.currentTarget || e.target.classList.contains('tokens')) e.currentTarget.querySelector('input')?.focus() }}>
-        <span className="sicon" aria-hidden="true">⌕</span>
-        {committed.length > 0 && (
-          <span className="tokens">
-            {committed.map((term, i) => (
-              <span className="token" key={i + term}>
-                {labelFor(term)}
-                <button type="button" className="token-x" aria-label={'Remove ' + term} onMouseDown={e => e.preventDefault()} onClick={() => removeChip(i)}>✕</button>
-              </span>
-            ))}
-          </span>
-        )}
-        <input
-          type="search" value={fragment} onChange={e => { onType(e.target.value); setSugOpen(true); setSugIdx(0) }}
-          onFocus={() => { clearTimeout(blurTimer.current); setSugOpen(true) }}
-          onBlur={() => { blurTimer.current = setTimeout(() => setSugOpen(false), 150) }}
-          onKeyDown={onSearchKey}
-          placeholder={committed.length ? 'Add another…' : 'Search a name, phone, till, PayBill or receipt — a comma adds another'}
-          aria-label="Search transactions" autoComplete="off"
-          role="combobox" aria-expanded={sugs.length > 0} aria-controls="suggest-list" aria-autocomplete="list"
-        />
-        {sugs.length > 0
-          ? <button className="suse" onMouseDown={e => e.preventDefault()} onClick={() => applySuggestion(sugs[sugIdx])} aria-label="Use the highlighted suggestion">Use <kbd>↵</kbd></button>
-          : q
-            ? <button className="sclear" onClick={() => { setQ(''); setSugOpen(false) }} aria-label="Clear search"><span aria-hidden="true">✕</span> Clear</button>
-            : <kbd className="skbd" aria-hidden="true">/</kbd>}
-        {sugs.length > 0 && (
-          <ul className="suggest" id="suggest-list" role="listbox">
-            {sugs.map((e, i) => (
-              <li key={e.key} role="option" aria-selected={i === sugIdx} className={i === sugIdx ? 'sel' : ''}
-                  onMouseDown={ev => { ev.preventDefault(); applySuggestion(e) }} onMouseEnter={() => setSugIdx(i)}>
-                <span className="s-kind" aria-hidden="true">{e.kind === 'person' ? '👤' : '🏪'}</span>
-                <span className="s-main"><span className="s-label">{titleCase(e.label)}</span><span className="s-sub">{e.sub}</span></span>
-                <span className="s-n">{e.n} txn{e.n === 1 ? '' : 's'}</span>
-                <span className="s-use" aria-hidden="true">{i === sugIdx ? 'Use ↵' : 'Use →'}</span>
-              </li>
-            ))}
-            <li className="s-hint" aria-hidden="true">↑↓ to move · Enter or click to use · a comma adds another · Esc to keep what you typed</li>
-          </ul>
-        )}
-      </div>
+      <SearchBox q={q} setQ={setQ} terms={terms} />
 
-      {active.length > 0 && (
-        <div className="filterstrip" role="status" aria-live="polite">
-          <span className="fs-icon" aria-hidden="true">⚲</span>
-          <span className="fs-text">Showing <strong>{shownCount.toLocaleString()}</strong> of {data.txns.length.toLocaleString()} transactions</span>
-          <span className="fs-pills">
-            {active.map(f => (
-              <button key={f.key} className="fs-pill" onClick={f.clear} title={'Remove this filter'}>{f.label}<span aria-hidden="true"> ✕</span></button>
-            ))}
-          </span>
-          {active.length > 1 && <button className="fs-clear" onClick={clearAll}>Clear all</button>}
-        </div>
-      )}
+      <FilterStrip active={active} shown={shownCount} total={data.txns.length} onClearAll={clearAll} />
 
       {!result && (
         <nav className="jumpbar" aria-label="Jump to section">
@@ -232,7 +100,7 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
         <SearchResults q={q} result={result} cat={cat} setCat={setCat} setQ={setQ} showTip={showTip} hideTip={hideTip} onPick={pick} meta={data.meta} context={monthKey === 'all' ? '' : monthLbl(monthKey)} />
       ) : (
         <>
-          <Tiles txns={txns} people={people} onCharges={goCharges} />
+          <Tiles txns={txns} people={people} />
 
           <div className="charts">
             <section className="panel" style={{ marginTop: 0 }}>
