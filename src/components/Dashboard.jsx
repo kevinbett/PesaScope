@@ -98,6 +98,12 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
   const catTotal = cats.out.reduce((s, [, v]) => s + v, 0) || 1
 
   useEffect(() => { setCat('') }, [q])
+  useEffect(() => {
+    const onKey = e => {
+      if (e.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) { e.preventDefault(); document.querySelector('.searchbar input')?.focus() }
+    }
+    window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const pick = p => { setQ(p.phone || p.name || p.key); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const pickCat = c => { setCat(c); txnsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
@@ -166,7 +172,8 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
           aria-label="Search transactions" autoComplete="off"
           role="combobox" aria-expanded={sugs.length > 0} aria-controls="suggest-list" aria-autocomplete="list"
         />
-        {q && <button className="sclear" onClick={() => { setQ(''); setSugOpen(false) }} aria-label="Clear search">✕</button>}
+        {q ? <button className="sclear" onClick={() => { setQ(''); setSugOpen(false) }} aria-label="Clear search">✕</button>
+           : <kbd className="skbd" aria-hidden="true">/</kbd>}
         {sugs.length > 0 && (
           <ul className="suggest" id="suggest-list" role="listbox">
             {sugs.map((e, i) => (
