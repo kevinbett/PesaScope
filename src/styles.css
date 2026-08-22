@@ -414,7 +414,6 @@ tfoot td { font-weight: 600; background: var(--ground); border-top: 1px solid va
 .m-code, .m-time { display: none; }
 /* day bands */
 tr.day-row td { position: sticky; top: 33px; z-index: 1; padding: 6px 12px 5px; background: var(--ground); border-bottom: 1px solid var(--line); font-size: 11.5px; color: var(--ink-2); white-space: nowrap; box-shadow: inset 0 1px 0 var(--line); }
-tr.day-row td::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-right: 8px; vertical-align: 1px; }
 tr.day-row .day-name { font-family: "Archivo", sans-serif; font-weight: 600; color: var(--ink); letter-spacing: 0.01em; }
 tr.day-row .day-name strong { color: var(--accent); font-weight: 700; }
 tr.day-row .day-meta { margin-left: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
@@ -484,7 +483,6 @@ tr.detail-row.leaving .detail-wrap > .detail { animation: unsettle .22s ease bot
   tr.charge-row td.who { font-weight: 500; }
   tr.day-row { display: block; }
   tr.day-row td { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 8px; position: static; border-radius: 8px; margin: 10px 0 2px; padding: 6px 10px; white-space: normal; }
-  tr.day-row td::before { display: none; }
   tr.day-row .day-meta { margin-left: 0; white-space: normal; font-size: 11px; }
   tr.detail-row { display: block; }
   tr.detail-row td { display: block; padding: 0; }
