@@ -45,8 +45,23 @@ export function makeSample() {
     if (day % 15 === 3) mk(day, 'Unit Trust Invest To 4145555 - ZIIDI MMF by M-PESA\\UnitTrust', 0, ri(500, 5000))
     if (day % 31 === 14) mk(day, 'Pay Bill Online to 5212121 - SportPesa 1 Acc. 0722000', 0, ri(100, 500))
     if (day % 40 === 20) mk(day, 'Transfer from Bank 517819 - IM BANK LIMITED- APP to Customer via API', ri(10000, 40000), 0)
+    // the rest of the statement families, so every section has something to show
+    if (day % 35 === 30) mk(day, 'Receive International Transfer From 573388 - TERRAPAY MONEY TRANSFER SERVICES (KENYA) LIMITED. Original conversation ID is TP' + ri(1000, 9999) + '.', ri(20000, 60000), 0)
+    if (day % 28 === 26) mk(day, 'Business Payment from 851901 - Tala Loan via API. Original conversation ID is x.', ri(5000, 20000), 0)
+    if (day % 28 === 2) bill(day, '851900', 'Tala Mobile', '0722***000', ri(5500, 21000), 33)
+    if (day % 25 === 11) mk(day, 'M-Shwari Deposit', 0, ri(2000, 10000))
+    if (day % 50 === 45) mk(day, 'M-Shwari Withdraw', ri(5000, 20000), 0)
+    if (day % 45 === 40) { mk(day, 'KCB M-PESA Loan Request', 0, 0); mk(day, 'KCB M-PESA Withdraw', ri(10000, 30000), 0) }
+    if (day % 45 === 5) mk(day, 'KCB M-PESA Loan Repayment', 0, ri(5000, 12000))
+    if (day % 10 === 7) mk(day, 'Customer Bundle Purchase to 244441SAFARICOM POSTPAID BUNDLES by - 0722***000 SAMPLE CUSTOMER', 0, pick([99, 250, 500, 999]))
+    if (day % 22 === 13) { const r = rc(); mk(day, 'Customer Payment to Small Business to - 254746***796 Oprah Musyoki', 0, ri(300, 1200), { receipt: r }); mk(day, 'Customer Transfer of Funds Charge', 0, 13, { receipt: r }) }
+    if (day % 33 === 17) { const r = rc(); mk(day, 'Offnet C2B Transfer to 585555 - AIRTEL MONEY. for Mobile No. 254756774073', 0, ri(200, 1500), { receipt: r }); mk(day, 'Customer Transfer of Funds Charge', 0, 22, { receipt: r }) }
+    if (day % 52 === 33) mk(day, 'Offnet C2B Transaction Reversal by M-PESA\\MMIInitiator for 585555 - AIRTEL MONEY.', 500, 0)
+    if (day % 30 === 19) bill(day, '543200', 'Sanlam General Insurance', 'POL' + ri(1000, 9999), ri(3000, 9000))
+    if (day % 16 === 9) mk(day, 'Merchant Payment Online to 177948 - QUICK MART KIAMBU', 0, ri(900, 3500), { hour: 21 })
   }
-  txns.sort((a, b) => a.dt - b.dt)
-  linkCharges(txns)
-  return { meta: { name: 'Sample Customer', phone: '0722***000', period: 'last two months' }, summary: {}, txns }
+  const kept = txns.filter(t => t.paidIn > 0 || t.withdrawn > 0)
+  kept.sort((a, b) => a.dt - b.dt)
+  linkCharges(kept)
+  return { meta: { name: 'Sample Customer', phone: '0722***000', period: 'last two months' }, summary: {}, txns: kept }
 }
