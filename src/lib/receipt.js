@@ -45,7 +45,16 @@ export function receiptRows(t, meta) {
   rows.push([partyLabel, t.isCharge && t.parentWho ? titleCase(t.parentWho) : who])
   rows.push(['Transaction No', t.receipt])
   rows.push(['Payment Type', rail(t)])
-  if (t.code) rows.push([/^merchant payment|^intimate payment merchant/i.test(t.details) ? 'Till Number' : (t.cat === 'Send money' ? 'Code' : 'Paybill Number'), t.code])
+  if (t.code) {
+    const d = t.details
+    const codeLabel =
+      /^merchant payment|^intimate payment merchant/i.test(d) ? 'Till Number' :
+      /^customer withdrawal|^customer deposit|deposit of funds/i.test(d) ? 'Agent Number' :
+      /^funds received|^business payment|^salary payment|^transfer from bank|^receive international|^sell shares/i.test(d) ? 'Sender Code' :
+      /^offnet c2b/i.test(d) ? 'Network Code' :
+      t.cat === 'Send money' ? 'Code' : 'Paybill Number'
+    rows.push([codeLabel, t.code])
+  }
   if (t.phone) rows.push([inn ? 'From Number' : 'Recipient Number', t.phone])
   if (meta?.phone) rows.push(['Phone Number', spacedPhone(meta.phone)])
   if (t.account) rows.push(['Account No', t.account])
