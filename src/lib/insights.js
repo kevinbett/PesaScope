@@ -129,7 +129,15 @@ const norm = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
 const digitsOf = s => (s || '').replace(/\D/g, '')
 /** a phone's identity: digits without the 254 / 0 prefix, asterisks dropped */
 const phoneKey = s => digitsOf(s).replace(/^(?:254|0)/, '')
-export const splitTerms = q => q.split(',').map(t => t.trim()).filter(t => norm(t))
+export const splitTerms = q => {
+  const seen = new Set(), out = []
+  for (const t of q.split(',').map(t => t.trim())) {
+    const k = norm(t); const pk = digitsOf(t).replace(/^(?:254|0)/, '')
+    const id = pk.length >= 6 ? 'p' + pk : k
+    if (k && !seen.has(id)) { seen.add(id); out.push(t) }
+  }
+  return out
+}
 
 /**
  * Relevance search, OR'd across comma-separated terms. For each term the most

@@ -27,6 +27,15 @@ export default function App() {
     if (data && dashRef.current) dashRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [data])
 
+  // a refresh or tab close drops the statement (nothing is stored, by design):
+  // ask first — but only when a real statement is loaded, never on the loader or the sample
+  useEffect(() => {
+    if (!data || isSample) return
+    const guard = e => { e.preventDefault(); e.returnValue = 'Refreshing will clear your statement — you will need to upload the PDF again.' }
+    window.addEventListener('beforeunload', guard)
+    return () => window.removeEventListener('beforeunload', guard)
+  }, [data, isSample])
+
   return (
     <>
       <div className="flag-ribbon" aria-hidden="true" />
