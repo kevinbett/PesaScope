@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { fmt, monthOf, monthLbl } from '../lib/format.js'
-import { buildPeople, topSentTo, topReceivedFrom, topMerchants, categoryTotals, habits, search, chargesReport, splitTerms, titleCase } from '../lib/insights.js'
+import { buildPeople, topSentTo, topReceivedFrom, topMerchants, categoryTotals, habits, search, chargesReport, splitTerms, titleCase, buildIndex, suggest } from '../lib/insights.js'
 import { useTooltip } from './Tooltip.jsx'
 import HBars from './HBars.jsx'
 import FlowChart from './FlowChart.jsx'
@@ -51,6 +51,9 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
   const [monthKey, setMonthKey] = useState('all')
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('')
+  const [sugOpen, setSugOpen] = useState(false)
+  const [sugIdx, setSugIdx] = useState(0)
+  const blurTimer = useRef(null)
   const { showTip, hideTip, tooltipEl } = useTooltip()
   const txnsRef = useRef(null)
   const chargesRef = useRef(null)
@@ -67,6 +70,22 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
   const cats = useMemo(() => categoryTotals(txns), [txns])
   const habitItems = useMemo(() => habits(txns, people), [txns, people])
   const result = useMemo(() => search(txns, q), [txns, q])
+  // type-ahead over the whole statement (not the month slice): the fragment is the text after the last comma
+  const index = useMemo(() => buildIndex(data.txns), [data])
+  const fragment = q.slice(q.lastIndexOf(',') + 1).trim()
+  const sugs = useMemo(() => (sugOpen ? suggest(index, fragment) : []), [index, fragment, sugOpen])
+  const applySuggestion = e => {
+    const head = q.includes(',') ? q.slice(0, q.lastIndexOf(',') + 1).trim() + ' ' : ''
+    setQ(head + e.value)
+    setSugOpen(false); setSugIdx(0)
+  }
+  const onSearchKey = ev => {
+    if (!sugs.length) { if (ev.key === 'Escape') setSugOpen(false); return }
+    if (ev.key === 'ArrowDown') { ev.preventDefault(); setSugIdx(i => (i + 1) % sugs.length) }
+    else if (ev.key === 'ArrowUp') { ev.preventDefault(); setSugIdx(i => (i - 1 + sugs.length) % sugs.length) }
+    else if (ev.key === 'Enter') { ev.preventDefault(); applySuggestion(sugs[sugIdx]) }
+    else if (ev.key === 'Escape') { setSugOpen(false) }
+  }
   const charges = useMemo(() => chargesReport(txns), [txns])
   const catTotal = cats.out.reduce((s, [, v]) => s + v, 0) || 1
 
@@ -85,7 +104,11 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
 
   // everything currently narrowing the view, each removable on its own
   const active = [
-    ...splitTerms(q).map(term => ({ key: 'q:' + term, label: /^\d/.test(term) ? term : titleCase(term), clear: () => setQ(splitTerms(q).filter(t => t !== term).join(', ')) })),
+    ...splitTerms(q).map(term => {
+      const d = term.replace(/\D/g, '').replace(/^(?:254|0)/, '')
+      const hit = d.length >= 6 ? index.find(e => e.kind === 'person' && e.value.replace(/\D/g, '').endsWith(d)) : null
+      return { key: 'q:' + term, label: hit ? titleCase(hit.label) + ' · ' + hit.value : (/^\d/.test(term) ? term : titleCase(term)), clear: () => setQ(splitTerms(q).filter(t => t !== term).join(', ')) }
+    }),
     monthKey !== 'all' ? { key: 'm', label: monthLbl(monthKey), clear: () => setMonthKey('all') } : null,
     cat ? { key: 'c', label: cat, clear: () => setCat('') } : null,
   ].filter(Boolean)
@@ -117,11 +140,28 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
       <div className={'searchbar' + (q ? ' active' : '')}>
         <span className="sicon" aria-hidden="true">⌕</span>
         <input
-          type="search" value={q} onChange={e => setQ(e.target.value)}
+          type="search" value={q} onChange={e => { setQ(e.target.value); setSugOpen(true); setSugIdx(0) }}
+          onFocus={() => { clearTimeout(blurTimer.current); setSugOpen(true) }}
+          onBlur={() => { blurTimer.current = setTimeout(() => setSugOpen(false), 150) }}
+          onKeyDown={onSearchKey}
           placeholder="Search a name, phone, till, PayBill or receipt — combine with commas: faith, 0722***481"
-          aria-label="Search transactions"
+          aria-label="Search transactions" autoComplete="off"
+          role="combobox" aria-expanded={sugs.length > 0} aria-controls="suggest-list" aria-autocomplete="list"
         />
-        {q && <button className="sclear" onClick={() => setQ('')} aria-label="Clear search">✕</button>}
+        {q && <button className="sclear" onClick={() => { setQ(''); setSugOpen(false) }} aria-label="Clear search">✕</button>}
+        {sugs.length > 0 && (
+          <ul className="suggest" id="suggest-list" role="listbox">
+            {sugs.map((e, i) => (
+              <li key={e.key} role="option" aria-selected={i === sugIdx} className={i === sugIdx ? 'sel' : ''}
+                  onMouseDown={ev => { ev.preventDefault(); applySuggestion(e) }} onMouseEnter={() => setSugIdx(i)}>
+                <span className="s-kind" aria-hidden="true">{e.kind === 'person' ? '👤' : '🏪'}</span>
+                <span className="s-main"><span className="s-label">{titleCase(e.label)}</span><span className="s-sub">{e.sub}</span></span>
+                <span className="s-n">{e.n} txn{e.n === 1 ? '' : 's'}</span>
+              </li>
+            ))}
+            <li className="s-hint" aria-hidden="true">↑↓ to choose · Enter to use · type a comma to add another</li>
+          </ul>
+        )}
       </div>
 
       {active.length > 0 && (

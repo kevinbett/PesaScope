@@ -39,10 +39,10 @@ export default function SearchResults({ q, result, cat, setCat, setQ, showTip, h
         <button className="btn link" onClick={() => setQ('')}>✕ Clear search</button>
       </div>
       {r.terms.length > 1 && (
-        <div className="months">
+        <div className="months termchips">
           {r.terms.map(x => (
             <button key={x.term} className="mchip" aria-pressed={x.count > 0} title="Remove this term" onClick={() => setQ(splitTerms(q).filter(t => t !== x.term).join(', '))}>
-              {titleCase(x.term)} <span className="muted">{x.count ? x.count + (x.tier < 3 ? ' · ' + x.how : '') : 'no match'}</span> ✕
+              {(() => { const d = x.term.replace(/\D/g, ''); const p = d.length >= 6 && parties.find(p => p.phone && p.phone.replace(/\D/g, '').endsWith(d.replace(/^(?:254|0)/, ''))); return p ? titleCase(p.name) + ' · ' + p.phone : titleCase(x.term) })()} <span className="muted">{x.count ? x.count + (x.tier < 3 ? ' · ' + x.how : '') : 'no match'}</span> ✕
             </button>
           ))}
         </div>
@@ -93,8 +93,11 @@ export default function SearchResults({ q, result, cat, setCat, setQ, showTip, h
           ))}
         </div>
       )}
+      {!ambiguous && r.terms.length > 1 && parties.length === 1 && (
+        <p className="more-note">All {r.terms.length} terms point to the same counterparty — results are not double-counted.</p>
+      )}
       {!ambiguous && r.people.length === 1 && (
-        <p className="lede">
+        <p className="lede search-lede">
           <strong>{titleCase(r.people[0].name)}</strong>{r.people[0].phone ? ` (${r.people[0].phone})` : ''} — first seen {r.people[0].first}, last {r.people[0].last}.
           {r.people[0].sentN ? ` You sent ${r.people[0].sentN} time${r.people[0].sentN === 1 ? '' : 's'} (KES ${fmt(r.people[0].sent)}, avg ${fmt(r.people[0].sent / r.people[0].sentN)}).` : ''}
           {r.people[0].recvN ? ` They sent you ${r.people[0].recvN} time${r.people[0].recvN === 1 ? '' : 's'} (KES ${fmt(r.people[0].recv)}).` : ''}
