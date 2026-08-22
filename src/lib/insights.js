@@ -255,3 +255,36 @@ export function chargesReport(txns) {
   const biggest = fees.reduce((a, b) => (b.withdrawn > a.withdrawn ? b : a))
   return { total, n: fees.length, out, pct: out ? (total / out) * 100 : 0, byType, byParent, byMonth, topPeople, sends, biggest, perDay: total / Math.max(1, Math.round((txns[txns.length - 1].dt - txns[0].dt) / 864e5) + 1) }
 }
+
+// ---------- autosuggest index ----------
+/** distinct counterparties for type-ahead: people (by phone) and brands (by name) */
+export function buildIndex(txns) {
+  const m = new Map()
+  for (const t of txns) {
+    if (t.isCharge || !t.who) continue
+    const isPerson = !!t.phone
+    const key = isPerson ? 'p:' + t.key : 'b:' + brandKey(t.who)
+    const e = m.get(key) || { key, label: t.who, value: isPerson ? t.phone : t.who, sub: isPerson ? t.phone : (t.code ? (t.cat === 'Buy Goods (Till)' ? 'Till ' : 'PayBill ') + t.code : t.cat), kind: isPerson ? 'person' : 'merchant', n: 0, last: t.date, cat: t.cat }
+    e.n++; if (t.date > e.last) { e.last = t.date; e.label = t.who }
+    m.set(key, e)
+  }
+  return [...m.values()].sort((a, b) => b.n - a.n)
+}
+
+/** rank index entries for a typed fragment: word-prefix first, then substring, then digits */
+export function suggest(index, fragment, limit = 8) {
+  const f = norm(fragment)
+  if (f.length < 2) return []
+  const d = digitsOf(fragment)
+  const score = e => {
+    const ws = words(e.label)
+    if (ws.some(w => w === f)) return 4
+    if (ws.some(w => w.startsWith(f))) return 3
+    if (norm(e.label).includes(f)) return 2
+    if (d.length >= 3 && digitsOf(e.value + ' ' + e.sub).includes(d)) return 1
+    return 0
+  }
+  const already = e => norm(e.value) === f || (d.length >= 6 && digitsOf(e.value).replace(/^(?:254|0)/, '') === d.replace(/^(?:254|0)/, ''))
+  return index.map(e => ({ e, s: score(e) })).filter(x => x.s > 0 && !already(x.e))
+    .sort((a, b) => b.s - a.s || b.e.n - a.e.n).slice(0, limit).map(x => x.e)
+}
