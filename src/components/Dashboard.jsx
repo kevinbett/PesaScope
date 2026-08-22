@@ -10,6 +10,7 @@ import Merchants from './Merchants.jsx'
 import Habits from './Habits.jsx'
 import SearchResults from './SearchResults.jsx'
 import Charges from './Charges.jsx'
+import Section from './Section.jsx'
 
 function Tiles({ txns, people, onCharges }) {
   const inn = txns.reduce((s, t) => s + t.paidIn, 0)
@@ -74,6 +75,10 @@ export default function Dashboard({ data, isSample }) {
   const pick = p => { setQ(p.phone || p.name || p.key); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const pickCat = c => { setCat(c); txnsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
   const goCharges = () => chargesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const jump = id => {
+    if (id === 'overview') return window.scrollTo({ top: 0, behavior: 'smooth' })
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   const m = data.meta
   const period = m.period || (txns.length ? txns[0].date + ' → ' + txns[txns.length - 1].date : '')
@@ -105,6 +110,14 @@ export default function Dashboard({ data, isSample }) {
         {q && <button className="sclear" onClick={() => setQ('')} aria-label="Clear search">✕</button>}
       </div>
 
+      {!result && (
+        <nav className="jumpbar" aria-label="Jump to section">
+          {[['overview', 'Overview'], ['transactions', 'Transactions'], ['people', 'People'], ['habits', 'Habits'], ['merchants', 'Merchants'], ['charges', 'Charges']].map(([id, l]) => (
+            <button key={id} className="jump" onClick={() => jump(id)}>{l}</button>
+          ))}
+        </nav>
+      )}
+
       {result ? (
         <SearchResults q={q} result={result} cat={cat} setCat={setCat} setQ={setQ} showTip={showTip} hideTip={hideTip} />
       ) : (
@@ -127,22 +140,21 @@ export default function Dashboard({ data, isSample }) {
             </section>
           </div>
 
-          <div className="charts">
-            <People title="You sent the most to" sub="People, by total sent — tap a name to see every transaction with them." people={sentTo} field="sent" countField="sentN" onPick={pick} emptyNote="No person-to-person sends in this period." />
-            <People title="You received the most from" sub="People and remittance services that paid you." people={recvFrom} field="recv" countField="recvN" onPick={pick} emptyNote="No person-to-person receipts in this period." />
+          <Section id="transactions" title="Transactions" innerRef={txnsRef}>
+            <TxnTable txns={txns} cat={cat} setCat={setCat} />
+          </Section>
+
+          <div className="charts" id="people">
+            <People id="sent" title="You sent the most to" sub="People, by total sent — tap a name to see every transaction with them." people={sentTo} field="sent" countField="sentN" onPick={pick} emptyNote="No person-to-person sends in this period." />
+            <People id="received" title="You received the most from" sub="People and remittance services that paid you." people={recvFrom} field="recv" countField="recvN" onPick={pick} emptyNote="No person-to-person receipts in this period." />
           </div>
 
           <div className="charts">
-            <Habits items={habitItems} />
-            <Merchants merchants={merchants} onPick={pick} />
+            <Habits id="habits" items={habitItems} />
+            <Merchants id="merchants" merchants={merchants} onPick={pick} />
           </div>
 
           <Charges ref={chargesRef} report={charges} onShowAll={() => pickCat('Charges & fees')} onPick={pick} showTip={showTip} hideTip={hideTip} />
-
-          <section className="panel" ref={txnsRef}>
-            <h2>Transactions</h2>
-            <TxnTable txns={txns} cat={cat} setCat={setCat} />
-          </section>
         </>
       )}
       {tooltipEl}
