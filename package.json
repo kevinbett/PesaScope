@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "postinstall": "node scripts/fix-lock.js"
   },
   "dependencies": {
     "pdfjs-dist": "^4.6.82",
