@@ -82,8 +82,9 @@ export default function Dashboard({ data, isSample, onLoadOwn, mem, onRemoveStat
         <span className="meta">{(m.phone ? m.phone + ' · ' : '') + period}</span>
         <span className="meta">{txns.length} transactions</span>
       </div>
-      {!isSample && data.files && data.files.length > 1 && (
+      {!isSample && data.files && data.files.length > 0 && (
         <div className="files" aria-label="Loaded statements">
+          <span className="lblx">{data.files.length === 1 ? '1 statement' : data.files.length + ' statements combined'}</span>
           {data.files.map((f, i) => (
             <span className="file" key={f.name + i}>📄 <span className="mono">{f.period || f.name}</span> · {f.n.toLocaleString()}<button onClick={() => onRemoveStatement(i)} aria-label={'Remove ' + f.name} title="Remove this statement">✕</button></span>
           ))}

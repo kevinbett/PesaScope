@@ -564,3 +564,4 @@ tr.detail-row.leaving .detail-wrap > .detail { animation: unsettle .22s ease bot
 
 /* determinate progress once page counts are known */
 .dz-progress span.det { animation: none; transition: width .2s ease; }
+.files .lblx { align-self: center; margin-right: 4px; }

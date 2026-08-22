@@ -106,7 +106,7 @@ export default function Loader({ onParsed, loaded = false, isSample = false, loa
               <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 11V3m0 0L4.5 6.5M8 3l3.5 3.5M3 13h10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
               Choose PDF
             </button>
-            <div className="dz-hint">{loaded ? (isSample ? 'Drop your own statement to replace the sample' : 'Drop another statement to replace the one loaded') : 'PDF · the “M-PESA Full Statement” Safaricom emails you'}</div>
+            <div className="dz-hint">{loaded ? (isSample ? 'Drop your own statement to replace the sample' : `Drop your next statement to add it — build up the whole year. ${loadedFiles.length} loaded so far; you’ll be asked to add or replace.`) : 'PDF · the “M-PESA Full Statement” Safaricom emails you'}</div>
           </div>
         )}
         {busy && <div className="dz-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={progress ? Math.round((progress.page / progress.pages) * 100) : undefined} aria-label="Reading the statement"><span className={progress ? 'det' : ''} style={progress ? { width: Math.round((progress.page / progress.pages) * 100) + '%' } : undefined} /></div>}
@@ -124,8 +124,8 @@ export default function Loader({ onParsed, loaded = false, isSample = false, loa
             You already have {loadedFiles.length} statement{loadedFiles.length === 1 ? '' : 's'} loaded ({loadedFiles.map(f => f.period).join(' · ')}).
           </div>
           <div className="pending-actions">
-            <button className="btn primary" onClick={() => { onParsed(pending.parsed, false, 'add'); setPending(null); setStatus({ msg: 'Added — overlapping transactions are counted once.', err: false }) }}>Add to what’s loaded</button>
-            <button className="btn" onClick={() => { onParsed(pending.parsed, false, 'replace'); setPending(null); setStatus({ msg: 'Replaced.', err: false }) }}>Replace</button>
+            <button className="btn primary" onClick={() => { onParsed(pending.parsed, false, 'add'); setPending(null); setStatus({ msg: `Added — now ${loadedFiles.length + 1} statements combined; overlapping transactions are counted once.`, err: false }) }}>Add to what’s loaded</button>
+            <button className="btn" onClick={() => { onParsed(pending.parsed, false, 'replace'); setPending(null); setStatus({ msg: 'Replaced — only the new statement is loaded.', err: false }) }}>Replace instead</button>
             <button className="btn link" onClick={() => { setPending(null); setStatus({ msg: '', err: false }) }}>Cancel</button>
           </div>
         </div>
