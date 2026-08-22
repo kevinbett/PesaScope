@@ -467,3 +467,6 @@ tr.day-row .day-name strong { color: var(--accent); font-weight: 700; }
 tr.day-row .day-meta { margin-left: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 tr.day-row .day-meta .in { color: var(--accent); }
 tr.day-row + tr.txn-row td { border-top: none; }
+/* expanded detail stays within the visible part of a horizontally-scrolling table */
+.detail { position: sticky; left: 0; box-sizing: border-box; }
+@media (max-width: 780px) { .detail { max-width: calc(100vw - 58px); } }
