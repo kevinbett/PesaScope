@@ -3,10 +3,11 @@ import { fmt, dayHeading } from '../lib/format.js'
 import { titleCase, toCsv } from '../lib/insights.js'
 import { saveTextFile } from '../lib/download.js'
 import Paginator, { pageSlice } from './Paginator.jsx'
+import { printReceipt } from '../lib/receipt.js'
 
 const CAT_ORDER = ['Send money', 'Received', 'Buy Goods (Till)', 'PayBill', 'Bank & cards', 'Savings & investments', 'Loans', 'Fuliza', 'Insurance', 'Betting', 'Airtime & bundles', 'Cash out', 'Cash in', 'Charges & fees', 'Refunds & reversals', 'Other']
 
-export default function TxnTable({ txns, cat, setCat, title, onPick }) {
+export default function TxnTable({ txns, cat, setCat, title, onPick, meta }) {
   const [openKey, setOpenKey] = useState(null)
   const [copied, setCopied] = useState('')
   const [sort, setSort] = useState('date')
@@ -149,6 +150,10 @@ export default function TxnTable({ txns, cat, setCat, title, onPick }) {
                           <div className="detail-actions">
                             {onPick && !t.isCharge && (t.phone || t.who) && <button className="btn small" onClick={e => { e.stopPropagation(); onPick({ phone: t.phone, name: t.who, key: t.key }) }}>All transactions with {shortName(t)}</button>}
                             {onPick && t.isCharge && t.parentWho && <button className="btn small" onClick={e => { e.stopPropagation(); onPick({ phone: '', name: t.parentWho, key: t.parentKey }) }}>All with {titleCase(t.parentWho).split(' ')[0]}</button>}
+                            <button className="btn small primary" onClick={e => { e.stopPropagation(); if (!printReceipt(t, meta)) alert('Your browser blocked the receipt window — allow pop-ups for this page and try again.') }}>
+                              <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" style={{ verticalAlign: '-2px', marginRight: 6 }}><path d="M4 6V2h8v4M4 12H2V7h12v5h-2M4 10h8v4H4z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+                              Print receipt
+                            </button>
                             <button className="btn small" onClick={e => { e.stopPropagation(); copy(`${t.date} ${t.time} · ${t.receipt} · ${t.details} · ${t.paidIn ? '+' : '-'}KES ${fmt(t.paidIn || t.withdrawn)}`, 'row') }}>{copied === 'row' ? 'Copied ✓' : 'Copy details'}</button>
                           </div>
                         </div>
