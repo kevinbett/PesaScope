@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { fmt, monthOf, monthLbl } from '../lib/format.js'
-import { buildPeople, topSentTo, topReceivedFrom, topMerchants, categoryTotals, habits, search } from '../lib/insights.js'
+import { buildPeople, topSentTo, topReceivedFrom, topMerchants, categoryTotals, habits, search, chargesReport } from '../lib/insights.js'
 import { useTooltip } from './Tooltip.jsx'
 import HBars from './HBars.jsx'
 import FlowChart from './FlowChart.jsx'
@@ -9,8 +9,9 @@ import People from './People.jsx'
 import Merchants from './Merchants.jsx'
 import Habits from './Habits.jsx'
 import SearchResults from './SearchResults.jsx'
+import Charges from './Charges.jsx'
 
-function Tiles({ txns, people }) {
+function Tiles({ txns, people, onCharges }) {
   const inn = txns.reduce((s, t) => s + t.paidIn, 0)
   const out = txns.reduce((s, t) => s + t.withdrawn, 0)
   const fees = txns.filter(t => t.isCharge).reduce((s, t) => s + t.withdrawn, 0)
@@ -23,12 +24,18 @@ function Tiles({ txns, people }) {
     { lbl: 'Net', sw: 'salio', v: (net >= 0 ? '+' : '−') + fmt(Math.abs(net)), cls: net >= 0 ? 'pos' : 'negv', sub: 'KES' },
     { lbl: 'Sent to people', sw: 'ulizotuma', v: fmt(sentP), cls: '', sub: `KES · ${people.filter(p => p.sent > 0).length} people` },
     { lbl: 'Received from people', sw: 'ulizopokea', v: fmt(recvP), cls: 'pos', sub: `KES · ${people.filter(p => p.recv > 0).length} people` },
-    { lbl: 'Charges & fees', sw: 'makato', v: fmt(fees), cls: fees > 0 ? 'negv' : '', sub: out ? 'KES · ' + (fees / out * 100).toFixed(1) + '% of outflow' : 'KES' },
+    { lbl: 'Charges & fees', sw: 'makato', v: fmt(fees), cls: fees > 0 ? 'negv' : '', sub: out ? 'KES · ' + (fees / out * 100).toFixed(1) + '% of outflow · see breakdown ↓' : 'KES', onClick: onCharges },
     { lbl: 'Fuliza borrowed', sw: 'deni la Fuliza', v: fmt(fuliza), cls: '', sub: fuliza ? 'KES · ' + txns.filter(t => t.type === 'Fuliza draw').length + ' draws' : 'none this period' },
   ]
   return (
     <div className="tiles">
-      {tiles.map(t => (
+      {tiles.map(t => t.onClick ? (
+        <button className="tile tile-btn" key={t.lbl} onClick={t.onClick} title="Jump to the charges breakdown">
+          <div className="lbl">{t.lbl}<span className="sw-lbl">{t.sw}</span></div>
+          <div className={'fig ' + t.cls}>{t.v}</div>
+          {t.sub ? <div className="sub">{t.sub}</div> : null}
+        </button>
+      ) : (
         <div className="tile" key={t.lbl}>
           <div className="lbl">{t.lbl}<span className="sw-lbl">{t.sw}</span></div>
           <div className={'fig ' + t.cls}>{t.v}</div>
@@ -45,6 +52,7 @@ export default function Dashboard({ data, isSample }) {
   const [cat, setCat] = useState('')
   const { showTip, hideTip, tooltipEl } = useTooltip()
   const txnsRef = useRef(null)
+  const chargesRef = useRef(null)
 
   const months = useMemo(() => [...new Set(data.txns.map(monthOf))].sort(), [data])
   const txns = useMemo(
@@ -58,12 +66,14 @@ export default function Dashboard({ data, isSample }) {
   const cats = useMemo(() => categoryTotals(txns), [txns])
   const habitItems = useMemo(() => habits(txns, people), [txns, people])
   const result = useMemo(() => search(txns, q), [txns, q])
+  const charges = useMemo(() => chargesReport(txns), [txns])
   const catTotal = cats.out.reduce((s, [, v]) => s + v, 0) || 1
 
   useEffect(() => { setCat('') }, [q, monthKey])
 
   const pick = p => { setQ(p.phone || p.name || p.key); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const pickCat = c => { setCat(c); txnsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
+  const goCharges = () => chargesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
   const m = data.meta
   const period = m.period || (txns.length ? txns[0].date + ' → ' + txns[txns.length - 1].date : '')
@@ -99,7 +109,7 @@ export default function Dashboard({ data, isSample }) {
         <SearchResults q={q} result={result} cat={cat} setCat={setCat} setQ={setQ} showTip={showTip} hideTip={hideTip} />
       ) : (
         <>
-          <Tiles txns={txns} people={people} />
+          <Tiles txns={txns} people={people} onCharges={goCharges} />
 
           <div className="charts">
             <section className="panel" style={{ marginTop: 0 }}>
@@ -126,6 +136,8 @@ export default function Dashboard({ data, isSample }) {
             <Habits items={habitItems} />
             <Merchants merchants={merchants} onPick={pick} />
           </div>
+
+          <Charges ref={chargesRef} report={charges} onShowAll={() => pickCat('Charges & fees')} onPick={pick} showTip={showTip} hideTip={hideTip} />
 
           <section className="panel" ref={txnsRef}>
             <h2>Transactions</h2>

@@ -288,3 +288,32 @@ tfoot td { font-weight: 600; background: var(--ground); border-top: 1px solid va
   .pmeta { white-space: normal; }
   table { min-width: 720px; }
 }
+/* ---------- charges section ---------- */
+.tile-btn { text-align: left; font: inherit; color: inherit; cursor: pointer; transition: border-color .15s, transform .15s; }
+.tile-btn:hover { border-color: var(--accent); transform: translateY(-1px); }
+.tile-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.charges h3 { font-family: "Archivo", sans-serif; font-weight: 600; font-size: 13px; margin: 16px 0 6px; color: var(--ink-2); letter-spacing: 0.02em; }
+.charges-head { display: grid; grid-template-columns: minmax(220px, 1.1fr) 2fr; gap: 18px; align-items: start; }
+.charges-total { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: 12px; background: var(--ground); border: 1px solid var(--line); }
+.charges-total .lbl { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.charges-total .fig { font-family: "Archivo", sans-serif; font-weight: 800; font-size: clamp(26px, 3vw, 34px); letter-spacing: -0.01em; }
+.charges-total .sub { font-size: 12.5px; color: var(--ink-2); }
+.charges-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.fact { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); font-size: 13px; display: flex; flex-direction: column; gap: 2px; }
+.fact strong { font-family: "Archivo", sans-serif; font-size: 15px; }
+.fact span { font-size: 11.5px; color: var(--ink-3); }
+.charges-months { display: flex; gap: 6px; align-items: flex-end; margin-top: 16px; height: 120px; padding-bottom: 18px; position: relative; }
+.cm { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; cursor: default; }
+.cm-val { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; color: var(--ink-3); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
+.cm-bar { width: 100%; max-width: 46px; flex: 1; display: flex; align-items: flex-end; }
+.cm-bar span { display: block; width: 100%; background: var(--neg); opacity: .85; border-radius: 4px 4px 0 0; min-height: 2px; transition: opacity .15s; }
+.cm:hover .cm-bar span { opacity: 1; }
+.cm-lbl { position: absolute; bottom: 0; font-size: 11px; color: var(--ink-3); }
+.charges-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.plist.compact .prow { padding: 6px 4px; }
+@media (max-width: 780px) {
+  .charges-head { grid-template-columns: 1fr; }
+  .charges-grid { grid-template-columns: 1fr; gap: 4px; }
+  .charges-months { height: 100px; }
+  .cm-val { display: none; }
+}

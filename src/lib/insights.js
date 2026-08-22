@@ -157,3 +157,44 @@ export function toCsv(rows) {
   const lines = rows.map(t => [t.date, t.time, t.receipt, t.type, t.cat, t.who, t.phone, t.code, t.account, t.paidIn || '', t.withdrawn || '', t.fee || '', t.balance ?? '', t.details].map(esc).join(','))
   return head.map(esc).join(',') + '\n' + lines.join('\n')
 }
+
+// ---------- charges report ----------
+const FEE_LABEL = d =>
+  /transfer of funds charge/i.test(d) ? 'Send money fee' :
+  /pay ?bill charge/i.test(d) ? 'PayBill fee' :
+  /pay merchant charge/i.test(d) ? 'Buy Goods fee' :
+  /withdrawal charge/i.test(d) ? 'Withdrawal fee' :
+  /airtime|bundle/i.test(d) ? 'Airtime fee' :
+  d.replace(/\s+/g, ' ').slice(0, 28)
+
+export function chargesReport(txns) {
+  const fees = txns.filter(t => t.isCharge && t.withdrawn > 0)
+  const out = txns.reduce((s, t) => s + t.withdrawn, 0)
+  const total = fees.reduce((s, t) => s + t.withdrawn, 0)
+  if (!fees.length) return { total: 0, n: 0, out, pct: 0, byType: [], byParent: [], byMonth: [], topPeople: [], sends: null, biggest: null }
+
+  const agg = (arr, keyFn) => {
+    const m = new Map()
+    for (const t of arr) { const k = keyFn(t); const v = m.get(k) || { v: 0, n: 0 }; v.v += t.withdrawn; v.n++; m.set(k, v) }
+    return [...m.entries()].map(([k, v]) => [k, v.v, v.n])
+  }
+  const byType = agg(fees, t => FEE_LABEL(t.details)).sort((a, b) => b[1] - a[1])
+  const parentCat = new Map(txns.filter(t => !t.isCharge).map(t => [t.receipt + '|' + t.key, t.cat]))
+  const byParent = agg(fees, t => (t.parentKey ? parentCat.get(t.receipt + '|' + t.parentKey) : null) || 'Other').sort((a, b) => b[1] - a[1])
+  const months = [...new Set(txns.map(t => t.date.slice(0, 7)))].sort()
+  const monthMap = new Map(agg(fees, t => t.date.slice(0, 7)).map(([k, v, n]) => [k, { v, n }]))
+  const outMonth = new Map()
+  for (const t of txns) if (t.withdrawn > 0) outMonth.set(t.date.slice(0, 7), (outMonth.get(t.date.slice(0, 7)) || 0) + t.withdrawn)
+  const byMonth = months.map(k => [k, monthMap.get(k)?.v || 0, monthMap.get(k)?.n || 0, outMonth.get(k) || 0])
+
+  // who cost the most in send-money fees
+  const pm = new Map()
+  for (const t of txns) if (P2P_SEND(t) && t.fee > 0) { const p = pm.get(t.key) || { key: t.key, name: t.who, phone: t.phone, fees: 0, n: 0, sent: 0 }; p.fees += t.fee; p.n++; p.sent += t.withdrawn; pm.set(t.key, p) }
+  const topPeople = [...pm.values()].sort((a, b) => b.fees - a.fees).slice(0, 5)
+
+  const sendsAll = txns.filter(P2P_SEND)
+  const free = sendsAll.filter(t => !t.fee).length
+  const sends = sendsAll.length ? { n: sendsAll.length, free, avgFee: sendsAll.reduce((s, t) => s + (t.fee || 0), 0) / Math.max(1, sendsAll.length - free), avgPct: sendsAll.filter(t => t.fee).reduce((s, t) => s + t.fee / t.withdrawn, 0) / Math.max(1, sendsAll.length - free) * 100 } : null
+  const biggest = fees.reduce((a, b) => (b.withdrawn > a.withdrawn ? b : a))
+  return { total, n: fees.length, out, pct: out ? (total / out) * 100 : 0, byType, byParent, byMonth, topPeople, sends, biggest, perDay: total / Math.max(1, Math.round((txns[txns.length - 1].dt - txns[0].dt) / 864e5) + 1) }
+}
