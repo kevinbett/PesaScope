@@ -130,12 +130,29 @@ parentWho/parentKey/parentPhone/parentCode (on charge rows), rawWho/rawKey (afte
    *scrolled* positions come back blank (artifact, not a bug); HMR may not re-evaluate lib modules —
    hard reload (`navigate` with force) before trusting behaviour; console-error backlog persists across reloads.
 
+## Deployment (Vercel)
+`vercel.json` is committed: framework `vite` (auto build `vite build` → `dist/`), and security headers on
+every response — a strict **CSP** (`default-src 'self'`, `script-src 'self'` — no inline scripts;
+`worker-src 'self' blob:` for pdf.js; `style-src` allows `'unsafe-inline'` + Google Fonts; `connect-src
+'self'` so nothing can be exfiltrated), HSTS, `X-Content-Type-Options`, `X-Frame-Options: DENY`,
+`Referrer-Policy: no-referrer`, a locked-down `Permissions-Policy`, and `COOP: same-origin-allow-popups`
+(the receipt/print windows are popups). Caching: `no-store` on `/` and `/index.html`, `immutable` on
+`/assets/*` (hashed). `.vercelignore` keeps tests/scripts/CI/blueprint out of the deploy.
+- **No inline handlers**: the receipt and print-list popups (`lib/receipt.js`, `lib/printlist.js`) attach
+  their Print/Close handlers from the opener via `addEventListener`, not `onclick` — required by the CSP.
+  If you add UI to those generated windows, keep it handler-free in the HTML string.
+- **To deploy**: import the GitHub repo in Vercel (root = repo root; it auto-detects Vite), or `vercel --prod`.
+  Nothing else to configure — no env vars, no serverless functions.
+- To verify the CSP locally: `npm run build`, inject the CSP as a `<meta http-equiv>` into `dist/index.html`,
+  `npm run preview` (launch.json `pesascope-preview`, port 5185), and watch for `securitypolicyviolation`
+  events while driving a real statement, CSV, receipt and print list. Last run: 0 violations.
+
 ## Known gaps / next steps
 - Month-by-month: add a per-category × month grid (categories as rows, months as columns, mini bars).
 - Transaction notes/tags through the opt-in memory (not built).
 - Web Worker parsing: measured and declined (~75 ms main-thread block out of ~450 ms); per-page
   progress shipped instead. Revisit only if a much larger statement shows real blocking.
-- Excluded by Kevin for now: PWA on a real domain; bank-statement parsers.
+- Bank-statement parsers: excluded by Kevin. (PWA/domain was excluded earlier but Vercel hosting is now set up — see Deployment; a full installable PWA with a service worker is still not built.)
 - Tooltips on charts are hover-driven; touch gets tap-highlight on bars only.
 
 ## Sampuli (sister app) in one paragraph

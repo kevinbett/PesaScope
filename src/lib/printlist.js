@@ -96,7 +96,7 @@ export function listHtml(rows, opts = {}) {
   </table>
   <div class="foot">Reproduced from your M-PESA statement by PesaScope on this device. A copy for your records — not an official Safaricom document. Amounts in KES.</div>
 </div>
-<div class="actions"><button onclick="window.print()">Print / Save as PDF</button><button class="ghost" onclick="window.close()">Close</button></div>
+<div class="actions"><button id="print">Print / Save as PDF</button><button class="ghost" id="close">Close</button></div>
 </body></html>`
 }
 
@@ -104,6 +104,8 @@ export function printList(rows, opts) {
   const w = window.open('', '_blank')
   if (!w) return false
   w.document.open(); w.document.write(listHtml(rows, opts)); w.document.close()
+  w.document.getElementById('print')?.addEventListener('click', () => w.print())
+  w.document.getElementById('close')?.addEventListener('click', () => w.close())
   w.focus()
   setTimeout(() => { try { w.print() } catch {} }, 400)
   return true
