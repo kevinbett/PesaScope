@@ -1,6 +1,6 @@
 import { fmt, fmtKES } from '../lib/format.js'
 
-export default function HBars({ entries, total, tipLabel, showTip, hideTip }) {
+export default function HBars({ entries, total, tipLabel, showTip, hideTip, onPick }) {
   if (!entries.length) return <p className="chart-note">Nothing in this period.</p>
   const max = Math.max(...entries.map(e => e[1]), 1)
   return (
@@ -15,6 +15,11 @@ export default function HBars({ entries, total, tipLabel, showTip, hideTip }) {
               ev
             )}
           onMouseLeave={hideTip}
+          onClick={onPick ? () => onPick(name) : undefined}
+          role={onPick ? 'button' : undefined}
+          tabIndex={onPick ? 0 : undefined}
+          onKeyDown={onPick ? e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(name) } } : undefined}
+          style={onPick ? { cursor: 'pointer' } : undefined}
         >
           <span className="cat" title={name}>{name}</span>
           <div className="hbar-track">
