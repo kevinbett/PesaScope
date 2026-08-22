@@ -491,15 +491,15 @@ tr.detail-row td { padding-top: 0; padding-bottom: 0; }
 }
 /* ---------- phones: the transaction table becomes a list of cards ----------
    cells: chevron · when · type · who · details · in · out · fee */
-.m-code { display: none; }
+.m-code, .m-time { display: none; }
 @media (max-width: 640px) {
   .table-scroller { overflow-x: hidden; max-height: none; border: none; border-radius: 0; }
   #transactions table, .search-results table { min-width: 0; width: 100%; display: block; }
   #transactions thead, .search-results thead { display: none; }
   #transactions tbody, #transactions tfoot, .search-results tbody, .search-results tfoot { display: block; }
   tr.txn-row {
-    display: grid; grid-template-columns: 14px auto 1fr auto;
-    grid-template-areas: "chev who who amt" "chev when typ fee";
+    display: grid; grid-template-columns: 14px 1fr auto;
+    grid-template-areas: "chev who amt" "chev typ fee";
     column-gap: 8px; row-gap: 2px; align-items: baseline;
     padding: 9px 6px 9px 2px; border-bottom: 1px solid var(--line);
   }
@@ -507,12 +507,13 @@ tr.detail-row td { padding-top: 0; padding-bottom: 0; }
   tr.txn-row td.chev-col { grid-area: chev; width: auto; align-self: start; padding-top: 3px; }
   tr.txn-row td.who { grid-area: who; max-width: none; font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   tr.txn-row td.who .tsub { display: none; }
-  tr.txn-row td.when { grid-area: when; font-size: 11.5px; color: var(--ink-3); }
-  tr.txn-row td.when .d { display: none; }                       /* the day band carries the date */
-  tr.txn-row td.when .tsub { display: inline; font-size: 11.5px; }
-  tr.txn-row td.typ { grid-area: typ; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; }
-  tr.txn-row td.typ .catpill { font-size: 10.5px; padding: 0 7px; margin: 0; }
-  tr.txn-row td.typ .m-code { display: inline; font-size: 11px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  tr.txn-row td.when { display: none; }                          /* time moves into the meta line; the day band carries the date */
+  tr.txn-row td.typ { grid-area: typ; display: flex; flex-wrap: wrap; align-items: center; gap: 3px 0; min-width: 0; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
+  tr.txn-row td.typ > * + *::before { content: '·'; margin: 0 6px; color: var(--ink-3); font-weight: 400; }
+  tr.txn-row td.typ .m-time { display: inline; font-size: 11.5px; }
+  tr.txn-row td.typ .catpill { font-size: 11.5px; padding: 0; margin: 0; background: none; border: none; border-radius: 0; color: var(--ink-2); white-space: nowrap; }
+  tr.txn-row td.typ .catpill.fz { background: none; color: #C9783E; font-weight: 600; }
+  tr.txn-row td.typ .m-code { display: inline; font-size: 11px; }
   tr.txn-row td.details { display: none; }
   tr.txn-row td.amt { grid-area: amt; text-align: right; font-size: 15px; font-weight: 600; }
   tr.txn-row td.amt:empty { display: none; }
@@ -524,7 +525,8 @@ tr.detail-row td { padding-top: 0; padding-bottom: 0; }
   tr.charge-row td.who { font-weight: 500; }
   /* day bands, detail panel and footer as blocks */
   tr.day-row { display: block; }
-  tr.day-row td { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; position: static; border-radius: 8px; margin: 10px 0 2px; padding: 6px 10px; white-space: normal; }
+  tr.day-row td { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 8px; position: static; border-radius: 8px; margin: 10px 0 2px; padding: 6px 10px; white-space: normal; }
+  tr.day-row td::before { display: none; }
   tr.day-row .day-meta { margin-left: 0; white-space: normal; font-size: 11px; }
   tr.detail-row { display: block; }
   tr.detail-row td { display: block; padding: 0; }
