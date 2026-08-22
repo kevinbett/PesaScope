@@ -650,3 +650,10 @@ tr.detail-row td { padding-top: 0; padding-bottom: 0; }
 }
 .searchbar input[type="search"]::placeholder { color: var(--ink-2); }
 @media (max-width: 640px) { .searchbar .skbd { display: none; } }
+/* compact sticky sample banner on phones */
+.sb-short { display: none; }
+@media (max-width: 640px) {
+  .sample-banner { padding: 7px 10px; gap: 6px 10px; font-size: 12.5px; top: 6px; }
+  .sb-long { display: none; } .sb-short { display: inline; }
+  .sample-banner .btn { padding: 4px 10px; font-size: 12px; }
+}

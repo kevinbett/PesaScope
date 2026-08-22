@@ -82,7 +82,7 @@ export default function SearchResults({ q, result, cat, setCat, setQ, showTip, h
           ))}
         </div>
       ))}
-      {!ambiguous && r.people.length > 1 && (
+      {!ambiguous && r.people.length > 1 && r.terms.length === 1 && (
         <div className="months">
           <span className="lblx">Matched people</span>
           {r.people.slice(0, 8).map(p => (
