@@ -1,10 +1,28 @@
+import { useEffect, useState } from 'react'
 import { fmt } from '../lib/format.js'
 import { titleCase, splitTerms } from '../lib/insights.js'
 import HBars from './HBars.jsx'
 import TxnTable from './TxnTable.jsx'
 
+/** distinct counterparties among the matched rows (charges count toward their parent) */
+function counterparties(rows) {
+  const m = new Map()
+  for (const t of rows) {
+    const key = t.isCharge ? (t.parentKey || t.key) : t.key
+    const name = t.isCharge ? (t.parentWho || t.who) : t.who
+    const c = m.get(key) || { key, name, phone: t.phone, n: 0, sent: 0, recv: 0, last: t.date }
+    if (!t.isCharge) { c.n++; c.sent += t.withdrawn; c.recv += t.paidIn; if (t.date > c.last) c.last = t.date; if (!c.phone && t.phone) c.phone = t.phone }
+    m.set(key, c)
+  }
+  return [...m.values()].sort((a, b) => (b.sent + b.recv) - (a.sent + a.recv))
+}
+
 export default function SearchResults({ q, result, cat, setCat, setQ, showTip, hideTip, onPick, meta, context }) {
   const r = result
+  const [combine, setCombine] = useState(false)
+  useEffect(() => { setCombine(false) }, [q])
+  const parties = counterparties(r.rows)
+  const ambiguous = r.terms.length === 1 && parties.length > 1 && !combine
   const tiles = [
     { lbl: 'You sent', v: fmt(r.sent), sub: `KES · ${r.sentN} transfer${r.sentN === 1 ? '' : 's'} to people`, cls: '' },
     { lbl: 'You received', v: fmt(r.recv), sub: `KES · ${r.recvN} receipt${r.recvN === 1 ? '' : 's'} from people`, cls: 'pos' },
@@ -29,6 +47,32 @@ export default function SearchResults({ q, result, cat, setCat, setQ, showTip, h
           ))}
         </div>
       )}
+      {ambiguous && (
+        <div className="ambig">
+          <div className="ambig-head">
+            <strong>“{r.terms[0].term}” matches {parties.length} different {parties.length === 2 ? 'counterparties' : 'counterparties'}.</strong>
+            <span> Totals aren’t combined until you pick one — or choose to combine them.</span>
+          </div>
+          <ol className="plist compact">
+            {parties.map((p, i) => (
+              <li key={p.key}>
+                <button className="prow" onClick={() => setQ(p.phone || p.name)}>
+                  <span className="prank">{i + 1}</span>
+                  <span className="pmain">
+                    <span className="pname"><span className="ptext">{titleCase(p.name)}</span></span>
+                    <span className="pmeta">{p.phone ? <span className="mono">{p.phone}</span> : null}{p.phone ? ' · ' : ''}{p.n} transaction{p.n === 1 ? '' : 's'} · last {p.last}</span>
+                  </span>
+                  <span className="pamt">{p.sent ? <>−{fmt(p.sent)}<small>sent</small></> : null}{p.recv ? <>+{fmt(p.recv)}<small>received</small></> : null}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+          <div className="ambig-actions">
+            <button className="btn small" onClick={() => setCombine(true)}>Combine all {parties.length} anyway</button>
+            <span className="more-note">Combined figures will be labelled as such.</span>
+          </div>
+        </div>
+      )}
       {r.suggestions.filter(sg => sg.options.length || true).map(sg => (
         <div className="nomatch" key={sg.term}>
           <span>No match for <strong>“{sg.term}”</strong>{sg.options.length ? ' — did you mean:' : '. Try the full name as it appears on the statement, a phone number, a till / PayBill number, or a receipt.'}</span>
@@ -39,7 +83,7 @@ export default function SearchResults({ q, result, cat, setCat, setQ, showTip, h
           ))}
         </div>
       ))}
-      {r.people.length > 1 && (
+      {!ambiguous && r.people.length > 1 && (
         <div className="months">
           <span className="lblx">Matched people</span>
           {r.people.slice(0, 8).map(p => (
@@ -49,7 +93,7 @@ export default function SearchResults({ q, result, cat, setCat, setQ, showTip, h
           ))}
         </div>
       )}
-      {r.people.length === 1 && (
+      {!ambiguous && r.people.length === 1 && (
         <p className="lede">
           <strong>{titleCase(r.people[0].name)}</strong>{r.people[0].phone ? ` (${r.people[0].phone})` : ''} — first seen {r.people[0].first}, last {r.people[0].last}.
           {r.people[0].sentN ? ` You sent ${r.people[0].sentN} time${r.people[0].sentN === 1 ? '' : 's'} (KES ${fmt(r.people[0].sent)}, avg ${fmt(r.people[0].sent / r.people[0].sentN)}).` : ''}
@@ -57,7 +101,10 @@ export default function SearchResults({ q, result, cat, setCat, setQ, showTip, h
           {r.people[0].fulizaN ? ` ${r.people[0].fulizaN} of your transfers were on Fuliza.` : ''}
         </p>
       )}
-      <div className="tiles">
+      {!ambiguous && combine && parties.length > 1 && (
+        <p className="lede combined-note"><strong>Combined across {parties.length} counterparties</strong> — {parties.slice(0, 4).map(p => titleCase(p.name)).join(', ')}{parties.length > 4 ? ` and ${parties.length - 4} more` : ''}.</p>
+      )}
+      {!ambiguous && <div className="tiles">
         {tiles.map(t => (
           <div className="tile" key={t.lbl}>
             <div className="lbl">{t.lbl}</div>
@@ -65,17 +112,17 @@ export default function SearchResults({ q, result, cat, setCat, setQ, showTip, h
             <div className="sub">{t.sub}</div>
           </div>
         ))}
-      </div>
-      {r.cats.out.length > 1 && (
+      </div>}
+      {!ambiguous && r.cats.out.length > 1 && (
         <section className="panel">
           <h2>Breakdown of matches</h2>
           <HBars entries={r.cats.out} total={catTotal} tipLabel="of matched outflow" showTip={showTip} hideTip={hideTip} />
         </section>
       )}
-      <section className="panel">
-        <h2>Matching transactions</h2>
-        <TxnTable txns={r.rows} cat={cat} setCat={setCat} title={'Transactions matching “' + q + '”'} onPick={onPick} meta={meta} context={context} />
-      </section>
+      {!ambiguous && <section className="panel">
+        <h2>Matching transactions{combine && parties.length > 1 ? ` — ${parties.length} counterparties combined` : ''}</h2>
+        <TxnTable txns={r.rows} cat={cat} setCat={setCat} title={'Transactions matching “' + q + '”' + (combine && parties.length > 1 ? ' (' + parties.length + ' counterparties combined)' : '')} onPick={onPick} meta={meta} context={context} />
+      </section>}
     </div>
   )
 }
