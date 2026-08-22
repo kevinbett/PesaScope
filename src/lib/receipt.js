@@ -77,41 +77,52 @@ export function receiptHtml(t, meta) {
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
   body { margin: 0; background: #EEF2EF; font-family: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif; color: #17211B; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .sheet { max-width: 420px; margin: 28px auto; background: #fff; border-radius: 18px; overflow: hidden; box-shadow: 0 20px 50px -30px rgba(0,0,0,.35); }
-  .band { background: #1D7A4E; color: #fff; padding: 22px 26px 18px; display: flex; align-items: center; justify-content: space-between; }
-  .brand { font-weight: 800; font-size: 20px; letter-spacing: -0.01em; }
+  .sheet { width: 420px; max-width: calc(100vw - 24px); margin: 28px auto; background: #fff; border-radius: 18px; overflow: hidden; box-shadow: 0 20px 50px -30px rgba(0,0,0,.35); }
+  .band { background: #1D7A4E; color: #fff; padding: 18px 24px; display: flex; align-items: center; gap: 12px; }
+  .band svg { width: 34px; height: 34px; flex: 0 0 auto; }
+  .brand { font-weight: 800; font-size: 19px; letter-spacing: -0.01em; line-height: 1.1; }
   .brand span { color: #A9E3C4; }
-  .kanga { height: 6px; background: repeating-linear-gradient(90deg, #000 0 14px, #fff 14px 17px, #B71C1C 17px 31px, #fff 31px 34px, #1E6B47 34px 48px, #fff 48px 51px); }
-  .body { padding: 22px 26px 18px; }
-  .hi { font-size: 17px; font-weight: 600; margin: 0 0 14px; }
-  .row { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px dashed #DCE3DE; font-size: 13.5px; }
-  .row:last-child { border-bottom: none; }
-  .row .k { color: #56605A; flex: 0 0 auto; }
-  .row .v { font-weight: 600; text-align: right; word-break: break-word; }
-  .amount { margin: 14px 0 8px; padding: 16px; border-radius: 12px; background: #E2F0E8; text-align: center; }
-  .amount .k { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #1D7A4E; font-weight: 600; }
-  .amount .v { font-size: 32px; font-weight: 800; letter-spacing: -0.01em; margin-top: 2px; }
+  .brand small { display: block; font-weight: 500; font-size: 11.5px; opacity: .9; letter-spacing: .04em; }
+  .rcpt { margin-left: auto; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11.5px; opacity: .9; text-align: right; }
+  .kanga { height: 5px; background: repeating-linear-gradient(90deg, #000 0 14px, #fff 14px 17px, #B71C1C 17px 31px, #fff 31px 34px, #1E6B47 34px 48px, #fff 48px 51px); }
+  .body { padding: 20px 24px 16px; }
+  .hi { font-size: 16px; font-weight: 600; margin: 0 0 12px; }
+  .amount { margin: 0 0 14px; padding: 14px 16px; border-radius: 12px; background: #E2F0E8; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .amount .k { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #1D7A4E; font-weight: 600; }
+  .amount .v { font-size: 28px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; }
   .amount .v.in { color: #1D7A4E; }
-  .details { margin-top: 12px; font-size: 12px; color: #7E8880; line-height: 1.45; }
-  .foot { padding: 14px 26px 20px; border-top: 1px solid #E5E9E5; font-size: 11px; color: #7E8880; line-height: 1.5; }
+  .rows { display: grid; grid-template-columns: max-content 1fr; column-gap: 14px; row-gap: 0; }
+  .row { display: contents; }
+  .row .k, .row .v { padding: 7px 0; border-bottom: 1px dashed #DCE3DE; font-size: 13px; }
+  .row:last-child .k, .row:last-child .v { border-bottom: none; }
+  .row .k { color: #56605A; white-space: nowrap; }
+  .row .v { font-weight: 600; word-break: break-word; }
+  .row .v.mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px; letter-spacing: .02em; }
+  .details { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid #E5E9E5; font-size: 11.5px; color: #7E8880; line-height: 1.45; }
+  .foot { padding: 12px 24px 18px; background: #F7F9F7; border-top: 1px solid #E5E9E5; font-size: 10.5px; color: #7E8880; line-height: 1.5; }
   .foot strong { color: #56605A; }
   .actions { text-align: center; margin: 0 0 28px; }
   .actions button { font: inherit; font-weight: 600; padding: 10px 20px; border-radius: 999px; border: 1px solid #1D7A4E; background: #1D7A4E; color: #fff; cursor: pointer; margin: 0 5px; }
   .actions button.ghost { background: #fff; color: #1D7A4E; }
   @media print {
+    @page { size: A4; margin: 18mm; }
     body { background: #fff; }
-    .sheet { margin: 0 auto; box-shadow: none; border-radius: 0; max-width: 100%; }
+    /* a till-receipt-width card centred on the page — labels and values stay side by side */
+    .sheet { width: 110mm; max-width: 110mm; margin: 0 auto; box-shadow: none; border: 1px solid #D8DFDA; border-radius: 10px; }
     .actions { display: none; }
-    @page { margin: 12mm; }
   }
 </style></head><body>
 <div class="sheet">
-  <div class="band"><div class="brand">Pesa<span>Scope</span></div><div style="font-size:12px;opacity:.9">Transaction receipt</div></div>
+  <div class="band">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#145E3C"/><circle cx="28" cy="27" r="14.5" fill="none" stroke="#fff" stroke-width="5"/><path d="M39 38l10 10" stroke="#fff" stroke-width="6" stroke-linecap="round"/><rect x="20" y="29" width="4.5" height="7" rx="1.5" fill="#fff"/><rect x="26" y="24" width="4.5" height="12" rx="1.5" fill="#fff"/><rect x="32" y="19" width="4.5" height="17" rx="1.5" fill="#fff"/></svg>
+    <div class="brand">Pesa<span>Scope</span><small>Transaction receipt</small></div>
+    <div class="rcpt">${esc(t.receipt)}<br>${esc(t.date)}</div>
+  </div>
   <div class="kanga"></div>
   <div class="body">
     <p class="hi">${esc(greeting)}</p>
     <div class="amount"><div class="k">${amountLabel}</div><div class="v ${inn ? 'in' : ''}">${kes(t.paidIn || t.withdrawn)}</div></div>
-    ${rows.map(([k, v]) => `<div class="row"><span class="k">${esc(k)}:</span><span class="v">${esc(v)}</span></div>`).join('')}
+    <div class="rows">${rows.map(([k, v]) => `<div class="row"><span class="k">${esc(k)}</span><span class="v${/No$|Number|Code|Account/.test(k) ? ' mono' : ''}">${esc(v)}</span></div>`).join('')}</div>
     <p class="details">${esc(t.details)}</p>
   </div>
   <div class="foot"><strong>Reproduced from your M-PESA statement</strong> by PesaScope on this device. This is a copy for your records, not an official Safaricom receipt — the original is in your M-PESA statement under transaction ${esc(t.receipt)}.</div>
