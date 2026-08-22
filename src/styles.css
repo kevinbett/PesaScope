@@ -506,3 +506,58 @@ tr.detail-row.leaving .detail-wrap > .detail { animation: unsettle .22s ease bot
   .doc, .doc-busy, .dz-progress span, .detail-wrap, .detail-wrap > .detail, tr.detail-row.leaving .detail-wrap, tr.detail-row.leaving .detail-wrap > .detail { animation: none; }
   tr.txn-row .chev { transition: none; }
 }
+
+/* ---------- 16. multi-statement: add / replace, loaded files ---------- */
+.pending { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); display: flex; flex-direction: column; gap: 10px; }
+.pending-text { font-size: 13.5px; color: var(--ink-2); }
+.pending-text strong { color: var(--ink); }
+.pending-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.files { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.file { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px 6px 3px 10px; background: var(--card); }
+.file .mono { font-family: "IBM Plex Mono", monospace; font-size: 11px; }
+.file button { border: none; background: var(--row-hover); color: var(--ink-2); width: 18px; height: 18px; border-radius: 50%; font-size: 10px; cursor: pointer; }
+.file button:hover { background: var(--line); }
+
+/* ---------- 17. month by month ---------- */
+.trend-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+.trend { min-width: 640px; }
+.trend th { position: static; box-shadow: none; border-bottom: 1px solid var(--line); }
+.trend-row { cursor: pointer; }
+.trend-row.sel td { background: var(--accent-soft); }
+.trend td { vertical-align: top; }
+.trend td.mon { font-weight: 600; white-space: nowrap; }
+.trend td.amt { position: relative; padding-bottom: 10px; }
+.trend .tbar { position: absolute; left: 11px; right: 11px; bottom: 4px; height: 3px; border-radius: 999px; opacity: .7; }
+.trend .tbar.in { background: var(--series-in); } .trend .tbar.out { background: var(--series-out); }
+.trend .neg { color: var(--neg); }
+.trend td.topcat { font-size: 12.5px; }
+.trend td.delta { font-size: 12px; }
+@media (max-width: 640px) { .trend { min-width: 560px; } }
+
+/* ---------- 18. regular payments, needs-a-look, memory ---------- */
+.ptag.due { color: var(--neg); background: color-mix(in srgb, var(--neg) 14%, transparent); }
+.review { list-style: none; margin: 0; padding: 0; }
+.review-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px 16px; align-items: center; padding: 10px 4px; border-bottom: 1px solid var(--line); }
+.review-row:last-child { border-bottom: none; }
+.rv-who { font-weight: 600; font-size: 14px; }
+.rv-why { font-size: 12.5px; color: var(--amber-ink); background: var(--amber-bg); border: 1px solid var(--amber-line); border-radius: 999px; padding: 1px 9px; display: inline-block; margin-top: 3px; }
+.rv-details { font-size: 12px; color: var(--ink-3); margin-top: 4px; word-break: break-word; }
+.rv-amt { font-family: "Archivo", sans-serif; font-weight: 700; white-space: nowrap; }
+.rv-amt.in { color: var(--accent); }
+.rv-cat { font-size: 12.5px; padding: 6px 8px; }
+.mem-toggle { display: grid; grid-template-columns: 20px 1fr; gap: 10px; align-items: start; font-size: 13.5px; cursor: pointer; }
+.mem-toggle input { margin-top: 3px; accent-color: var(--accent); }
+.mem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }
+.mem-grid h3 { font-family: "Archivo", sans-serif; font-weight: 600; font-size: 13px; margin: 0 0 6px; color: var(--ink-2); }
+.mem-list { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.mem-list li { padding: 4px 0; }
+.mem-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+.alias-add { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 10px; font-size: 13px; color: var(--ink-2); }
+.alias-add label { display: inline-flex; align-items: center; gap: 8px; }
+.alias-add input { font-size: 13px; padding: 6px 10px; min-width: 260px; }
+@media (max-width: 640px) {
+  .review-row { grid-template-columns: 1fr auto; }
+  .rv-cat { grid-column: 1 / -1; width: 100%; }
+  .mem-grid { grid-template-columns: 1fr; }
+  .alias-add input { min-width: 0; flex: 1; }
+}

@@ -2,8 +2,12 @@ import { useRef, useState } from 'react'
 import { parsePdf, isPasswordError } from '../lib/parser.js'
 import { makeSample } from '../lib/sample.js'
 
-export default function Loader({ onParsed, loaded = false, isSample = false }) {
-  const clearShown = () => onParsed(null, false)
+export default function Loader({ onParsed, loaded = false, isSample = false, loadedFiles = [] }) {
+  // with a real statement on screen, a new file is read first and then the user chooses Add or Replace;
+  // with the sample (or nothing) on screen, the screen is cleared as soon as a file is chosen
+  const keepExisting = loaded && !isSample
+  const clearShown = () => { if (!keepExisting) onParsed(null, false) }
+  const [pending, setPending] = useState(null)   // { parsed, name } awaiting Add / Replace
   const [armed, setArmed] = useState(false)
   const [needPw, setNeedPw] = useState(false)
   const [pw, setPw] = useState('')
@@ -11,6 +15,7 @@ export default function Loader({ onParsed, loaded = false, isSample = false }) {
   const [busy, setBusy] = useState(false)
   const [fileName, setFileName] = useState('')
   const bufRef = useRef(null)
+  const nameRef = useRef('')
   const fileRef = useRef(null)
 
   async function tryOpen(buf, password) {
@@ -24,7 +29,9 @@ export default function Loader({ onParsed, loaded = false, isSample = false }) {
       }
       setNeedPw(false)
       setStatus({ msg: `Imesomeka ✓ — parsed ${parsed.txns.length} transactions`, err: false })
-      onParsed(parsed, false)
+      const name = nameRef.current || 'statement.pdf'
+      if (keepExisting) setPending({ parsed: { ...parsed, name }, name })
+      else onParsed({ ...parsed, name }, false)
     } catch (e) {
       if (isPasswordError(e)) {
         bufRef.current = buf
@@ -49,7 +56,7 @@ export default function Loader({ onParsed, loaded = false, isSample = false }) {
       setStatus({ msg: 'That doesn’t look like a PDF.', err: true })
       return
     }
-    setFileName(file.name)
+    setFileName(file.name); nameRef.current = file.name
     clearShown()
     const rd = new FileReader()
     rd.onload = () => { bufRef.current = rd.result; tryOpen(rd.result, pw) }
@@ -109,6 +116,19 @@ export default function Loader({ onParsed, loaded = false, isSample = false }) {
         onChange={e => handleFile(e.target.files[0])}
       />
       <div id="status" role="status" className={status.err ? 'err' : ''}>{status.msg}</div>
+      {pending && (
+        <div className="pending" role="group" aria-label="What to do with the new statement">
+          <div className="pending-text">
+            <strong>{pending.parsed.meta.period || 'New statement'}</strong> · {pending.parsed.txns.length.toLocaleString()} transactions read.
+            You already have {loadedFiles.length} statement{loadedFiles.length === 1 ? '' : 's'} loaded ({loadedFiles.map(f => f.period).join(' · ')}).
+          </div>
+          <div className="pending-actions">
+            <button className="btn primary" onClick={() => { onParsed(pending.parsed, false, 'add'); setPending(null); setStatus({ msg: 'Added — overlapping transactions are counted once.', err: false }) }}>Add to what’s loaded</button>
+            <button className="btn" onClick={() => { onParsed(pending.parsed, false, 'replace'); setPending(null); setStatus({ msg: 'Replaced.', err: false }) }}>Replace</button>
+            <button className="btn link" onClick={() => { setPending(null); setStatus({ msg: '', err: false }) }}>Cancel</button>
+          </div>
+        </div>
+      )}
 
       {!loaded && <ol className="steps" aria-label="How to get your statement">
         <li><span className="n">1</span><span><strong>Request it</strong><br />M-PESA app → Statements → pick the months. Safaricom emails the PDF and texts you a PIN.</span></li>
