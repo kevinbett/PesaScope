@@ -168,6 +168,9 @@ export function search(txns, q) {
     const code = t.isCharge ? (t.parentCode || '') : t.code
     if (norm(who) === term || norm(brandKey(who)) === term) return 3
     if (phone && phoneKey(phone).length >= 6 && phoneKey(phone) === phoneKey(rawTerm)) return 3
+    // a merged alias: the row's identity key is the canonical phone even when its own number differs
+    const pk = phoneKey(rawTerm); const ident = t.isCharge ? t.parentKey : t.key
+    if (pk.length >= 6 && ident && phoneKey(ident) === pk) return 3
     if (code && norm(code) === term) return 3
     if (t.account && norm(t.account) === term) return 3
     if (norm(t.receipt) === term) return 3
@@ -295,3 +298,71 @@ export function suggest(index, fragment, limit = 8) {
   return index.map(e => ({ e, s: score(e) })).filter(x => x.s > 0 && !already(x.e))
     .sort((a, b) => b.s - a.s || b.e.n - a.e.n).slice(0, limit).map(x => x.e)
 }
+
+// ---------- month by month ----------
+export function monthlyTrends(txns) {
+  const m = new Map()
+  for (const t of txns) {
+    const k = t.date.slice(0, 7)
+    const r = m.get(k) || { key: k, inn: 0, out: 0, sentP: 0, recvP: 0, n: 0, cats: {} }
+    r.n++; r.inn += t.paidIn; r.out += t.withdrawn
+    if (P2P_SEND(t)) r.sentP += t.withdrawn
+    if (P2P_RECV(t)) r.recvP += t.paidIn
+    if (SPEND(t)) r.cats[t.cat] = (r.cats[t.cat] || 0) + t.withdrawn
+    m.set(k, r)
+  }
+  const rows = [...m.values()].sort((a, b) => (a.key < b.key ? -1 : 1))
+  for (const r of rows) { r.net = r.inn - r.out; const top = Object.entries(r.cats).sort((a, b) => b[1] - a[1])[0]; r.topCat = top ? { name: top[0], v: top[1] } : null }
+  // month-over-month change in spending
+  rows.forEach((r, i) => { r.delta = i ? r.out - rows[i - 1].out : null })
+  return rows
+}
+
+// ---------- regular payments (subscriptions) ----------
+const SUB_CATS = new Set(['PayBill', 'Buy Goods (Till)', 'Insurance', 'Savings & investments', 'Airtime & bundles', 'Loans', 'Betting'])
+const median = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : 0 }
+export function subscriptions(txns, today = new Date()) {
+  const by = new Map()
+  for (const t of txns) {
+    if (!(t.withdrawn > 0) || t.isCharge || !SUB_CATS.has(t.cat)) continue
+    const k = brandKey(t.who)
+    const s = by.get(k) || { key: k, name: t.who, cat: t.cat, code: t.code, dates: [], amounts: [], months: new Set() }
+    s.dates.push(t.dt); s.amounts.push(t.withdrawn); s.months.add(t.date.slice(0, 7)); s.name = t.who
+    by.set(k, s)
+  }
+  const out = []
+  for (const s of by.values()) {
+    if (s.dates.length < 3 || s.months.size < 2) continue
+    const d = s.dates.slice().sort((a, b) => a - b)
+    const gaps = d.slice(1).map((x, i) => (x - d[i]) / 864e5)
+    const gap = median(gaps)
+    if (!gap || gap > 45) continue
+    // regular = every gap sits within half the typical gap (or 3 days) of it
+    if (!gaps.every(g => Math.abs(g - gap) <= Math.max(3, gap * 0.5))) continue
+    const cadence = gap <= 9 ? 'weekly' : gap <= 18 ? 'fortnightly' : 'monthly'
+    const last = d[d.length - 1]
+    const next = new Date(last.getTime() + Math.round(gap) * 864e5)
+    out.push({ key: s.key, name: s.name, cat: s.cat, code: s.code, n: s.dates.length, months: s.months.size, cadence, gapDays: Math.round(gap), typical: median(s.amounts), total: s.amounts.reduce((a, b) => a + b, 0), last: last.toISOString().slice(0, 10), next: next.toISOString().slice(0, 10), overdue: next < today })
+  }
+  return out.sort((a, b) => b.total - a.total)
+}
+
+// ---------- needs a look ----------
+export function reviewItems(txns) {
+  // outliers are judged against the same payee's own history, and only for everyday
+  // spending — big transfers into savings, loans or your own bank are normal
+  const SKIP = new Set(['Savings & investments', 'Loans', 'Bank & cards', 'Fuliza', 'Charges & fees', 'Received', 'Refunds & reversals', 'Cash in'])
+  const hist = {}
+  for (const t of txns) if (t.withdrawn > 0 && !t.isCharge && !SKIP.has(t.cat)) (hist[brandKey(t.who)] = hist[brandKey(t.who)] || []).push(t.withdrawn)
+  const out = []
+  for (const t of txns) {
+    if (t.isCharge) continue
+    if (t.cat === 'Other' || t.type === 'Other' || !t.details) { out.push({ t, why: !t.details ? 'No details in the statement' : 'Could not be categorised' }); continue }
+    if (t.withdrawn >= 20000 && !SKIP.has(t.cat)) {
+      const h = hist[brandKey(t.who)] || []
+      if (h.length >= 4) { const med = median(h); if (med > 0 && t.withdrawn >= 8 * med) out.push({ t, why: `Unusually large for ${titleCase(brandKey(t.who))} (usually about ${Math.round(med).toLocaleString()})` }) }
+    }
+  }
+  return out.sort((a, b) => b.t.dt - a.t.dt)
+}
+export const CATEGORIES = ['Send money', 'Received', 'Buy Goods (Till)', 'PayBill', 'Bank & cards', 'Savings & investments', 'Loans', 'Fuliza', 'Insurance', 'Betting', 'Airtime & bundles', 'Cash out', 'Cash in', 'Charges & fees', 'Refunds & reversals', 'Other']

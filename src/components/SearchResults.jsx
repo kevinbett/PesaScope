@@ -17,7 +17,8 @@ function counterparties(rows) {
   return [...m.values()].sort((a, b) => (b.sent + b.recv) - (a.sent + a.recv))
 }
 
-export default function SearchResults({ q, result, cat, setCat, setQ, showTip, hideTip, onPick, meta, context }) {
+export default function SearchResults({ q, result, cat, setCat, setQ, showTip, hideTip, onPick, meta, context, mem, index = [] }) {
+  const [aliasPick, setAliasPick] = useState('')
   const r = result
   const [combine, setCombine] = useState(false)
   useEffect(() => { setCombine(false) }, [q])
@@ -69,6 +70,11 @@ export default function SearchResults({ q, result, cat, setCat, setQ, showTip, h
           <div className="ambig-actions">
             <span className="more-note">…or, if you really mean all of them together:</span>
             <button className="btn small ghost" onClick={() => setCombine(true)}>Combine all {parties.length} into one view</button>
+            {mem && parties.length <= 6 && (
+              <button className="btn small ghost" title="Treat these as one counterparty from now on" onClick={() => { mem.merge(parties.map(p => p.key), titleCase(parties[0].name)); setQ(parties[0].phone || parties[0].name) }}>
+                These are the same person — merge
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -94,6 +100,13 @@ export default function SearchResults({ q, result, cat, setCat, setQ, showTip, h
       )}
       {!ambiguous && r.terms.length > 1 && parties.length === 1 && (
         <p className="more-note">All {r.terms.length} terms point to the same counterparty — results are not double-counted.</p>
+      )}
+      {!ambiguous && r.people.length === 1 && mem && (
+        <form className="alias-add" onSubmit={e => { e.preventDefault(); const hit = index.find(x => (x.label + ' ' + x.sub).toLowerCase() === aliasPick.toLowerCase() || x.value === aliasPick || x.label.toLowerCase() === aliasPick.toLowerCase()); if (hit) { mem.merge([r.people[0].key, hit.kind === 'person' ? hit.value.replace(/\D/g, '').replace(/^(?:254|0)/, '') : hit.label.toUpperCase()], titleCase(r.people[0].name)); setAliasPick('') } }}>
+          <label>Also known as <input list="alias-options" value={aliasPick} onChange={e => setAliasPick(e.target.value)} placeholder="another name or number for this person…" /></label>
+          <datalist id="alias-options">{index.filter(x => x.kind === 'person' && x.value !== r.people[0].phone).slice(0, 200).map(x => <option key={x.key} value={x.label + ' ' + x.sub} />)}</datalist>
+          <button className="btn small" type="submit" disabled={!aliasPick}>Merge</button>
+        </form>
       )}
       {!ambiguous && r.people.length === 1 && (
         <p className="lede search-lede">

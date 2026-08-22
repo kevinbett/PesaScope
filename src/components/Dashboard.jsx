@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchTerms } from '../lib/useSearchTerms.js'
 import { fmt, monthOf, monthLbl } from '../lib/format.js'
-import { buildPeople, topSentTo, topReceivedFrom, topMerchants, categoryTotals, habits, search, chargesReport, splitTerms, buildIndex } from '../lib/insights.js'
+import { buildPeople, topSentTo, topReceivedFrom, topMerchants, categoryTotals, habits, search, chargesReport, splitTerms, buildIndex, monthlyTrends, subscriptions, reviewItems } from '../lib/insights.js'
 import { useTooltip } from './Tooltip.jsx'
 import HBars from './HBars.jsx'
 import FlowChart from './FlowChart.jsx'
@@ -15,8 +15,12 @@ import Section from './Section.jsx'
 import SearchBox from './SearchBox.jsx'
 import Tiles from './Tiles.jsx'
 import FilterStrip from './FilterStrip.jsx'
+import Trends from './Trends.jsx'
+import Subscriptions from './Subscriptions.jsx'
+import Review from './Review.jsx'
+import Settings from './Settings.jsx'
 
-export default function Dashboard({ data, isSample, onLoadOwn }) {
+export default function Dashboard({ data, isSample, onLoadOwn, mem, onRemoveStatement }) {
   const [monthKey, setMonthKey] = useState('all')
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('')
@@ -39,6 +43,9 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
   const index = useMemo(() => buildIndex(data.txns), [data])   // type-ahead over the whole statement, not the month slice
   const terms = useSearchTerms(q, setQ, index)
   const charges = useMemo(() => chargesReport(txns), [txns])
+  const trends = useMemo(() => monthlyTrends(data.txns), [data])          // whole statement, every month
+  const subs = useMemo(() => subscriptions(data.txns), [data])
+  const review = useMemo(() => reviewItems(data.txns), [data])
   const catTotal = cats.out.reduce((s, [, v]) => s + v, 0) || 1
 
   useEffect(() => { setCat('') }, [q])
@@ -75,6 +82,13 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
         <span className="meta">{(m.phone ? m.phone + ' · ' : '') + period}</span>
         <span className="meta">{txns.length} transactions</span>
       </div>
+      {!isSample && data.files && data.files.length > 1 && (
+        <div className="files" aria-label="Loaded statements">
+          {data.files.map((f, i) => (
+            <span className="file" key={f.name + i}>📄 <span className="mono">{f.period || f.name}</span> · {f.n.toLocaleString()}<button onClick={() => onRemoveStatement(i)} aria-label={'Remove ' + f.name} title="Remove this statement">✕</button></span>
+          ))}
+        </div>
+      )}
       {months.length > 1 && (
         <div className="months">
           <button className="mchip" aria-pressed={monthKey === 'all'} onClick={() => setMonthKey('all')}>All</button>
@@ -90,14 +104,14 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
 
       {!result && (
         <nav className="jumpbar" aria-label="Jump to section">
-          {[['overview', 'Overview'], ['transactions', 'Transactions'], ['people', 'People'], ['habits', 'Habits'], ['merchants', 'Merchants'], ['charges', 'Charges']].map(([id, l]) => (
+          {[['overview', 'Overview'], ['trends', 'Months'], ['transactions', 'Transactions'], ['people', 'People'], ['habits', 'Habits'], ['merchants', 'Merchants'], ['regular', 'Regular'], ['charges', 'Charges']].map(([id, l]) => (
             <button key={id} className="jump" onClick={() => jump(id)}>{l}</button>
           ))}
         </nav>
       )}
 
       {result ? (
-        <SearchResults q={q} result={result} cat={cat} setCat={setCat} setQ={setQ} showTip={showTip} hideTip={hideTip} onPick={pick} meta={data.meta} context={monthKey === 'all' ? '' : monthLbl(monthKey)} />
+        <SearchResults q={q} result={result} cat={cat} setCat={setCat} setQ={setQ} showTip={showTip} hideTip={hideTip} onPick={pick} meta={data.meta} context={monthKey === 'all' ? '' : monthLbl(monthKey)} mem={mem} index={index} />
       ) : (
         <>
           <Tiles txns={txns} people={people} />
@@ -119,6 +133,8 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
             </section>
           </div>
 
+          <Trends rows={trends} monthKey={monthKey} onPick={setMonthKey} />
+
           <Section id="transactions" title="Transactions" innerRef={txnsRef}>
             <TxnTable txns={txns} cat={cat} setCat={setCat} onPick={pick} meta={data.meta} context={monthKey === 'all' ? '' : monthLbl(monthKey)} />
           </Section>
@@ -133,9 +149,13 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
             <Merchants id="merchants" merchants={merchants} onPick={pick} />
           </div>
 
+          <Subscriptions items={subs} onPick={pick} />
+          <Review items={review} mem={mem} />
+
           <Charges ref={chargesRef} report={charges} onShowAll={() => pickCat('Charges & fees')} onPick={pick} showTip={showTip} hideTip={hideTip} />
         </>
       )}
+      {!isSample && <Settings mem={mem} txns={data.txns} />}
       {tooltipEl}
     </div>
   )
