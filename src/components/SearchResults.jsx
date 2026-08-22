@@ -50,26 +50,26 @@ export default function SearchResults({ q, result, cat, setCat, setQ, showTip, h
       {ambiguous && (
         <div className="ambig">
           <div className="ambig-head">
-            <strong>“{r.terms[0].term}” matches {parties.length} different {parties.length === 2 ? 'counterparties' : 'counterparties'}.</strong>
-            <span> Totals aren’t combined until you pick one — or choose to combine them.</span>
+            <strong>“{r.terms[0].term}” matches {parties.length} different counterparties.</strong>
+            <span> Choose who you meant — each opens only that one’s transactions, nothing is combined.</span>
           </div>
-          <ol className="plist compact">
+          <ol className="plist compact choose">
             {parties.map((p, i) => (
               <li key={p.key}>
-                <button className="prow" onClick={() => setQ(p.phone || p.name)}>
+                <button className="prow" onClick={() => setQ(p.phone || p.name)} aria-label={'Show only ' + titleCase(p.name)}>
                   <span className="prank">{i + 1}</span>
                   <span className="pmain">
                     <span className="pname"><span className="ptext">{titleCase(p.name)}</span></span>
-                    <span className="pmeta">{p.phone ? <span className="mono">{p.phone}</span> : null}{p.phone ? ' · ' : ''}{p.n} transaction{p.n === 1 ? '' : 's'} · last {p.last}</span>
+                    <span className="pmeta">{p.phone ? <span className="mono">{p.phone}</span> : null}{p.phone ? ' · ' : ''}{p.n} transaction{p.n === 1 ? '' : 's'}{p.sent ? ` · sent ${fmt(p.sent)}` : ''}{p.recv ? ` · received ${fmt(p.recv)}` : ''} · last {p.last}</span>
                   </span>
-                  <span className="pamt">{p.sent ? <>−{fmt(p.sent)}<small>sent</small></> : null}{p.recv ? <>+{fmt(p.recv)}<small>received</small></> : null}</span>
+                  <span className="choose-cta">Show only this one <span aria-hidden="true">→</span></span>
                 </button>
               </li>
             ))}
           </ol>
           <div className="ambig-actions">
-            <button className="btn small" onClick={() => setCombine(true)}>Combine all {parties.length} anyway</button>
-            <span className="more-note">Combined figures will be labelled as such.</span>
+            <span className="more-note">…or, if you really mean all of them together:</span>
+            <button className="btn small ghost" onClick={() => setCombine(true)}>Combine all {parties.length} into one view</button>
           </div>
         </div>
       )}
