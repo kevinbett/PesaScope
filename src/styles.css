@@ -561,3 +561,6 @@ tr.detail-row.leaving .detail-wrap > .detail { animation: unsettle .22s ease bot
   .mem-grid { grid-template-columns: 1fr; }
   .alias-add input { min-width: 0; flex: 1; }
 }
+
+/* determinate progress once page counts are known */
+.dz-progress span.det { animation: none; transition: width .2s ease; }

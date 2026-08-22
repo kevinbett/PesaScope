@@ -13,6 +13,7 @@ export default function Loader({ onParsed, loaded = false, isSample = false, loa
   const [pw, setPw] = useState('')
   const [status, setStatus] = useState({ msg: '', err: false })
   const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState(null)   // { page, pages, phase }
   const [fileName, setFileName] = useState('')
   const bufRef = useRef(null)
   const nameRef = useRef('')
@@ -20,9 +21,9 @@ export default function Loader({ onParsed, loaded = false, isSample = false, loa
 
   async function tryOpen(buf, password) {
     setStatus({ msg: 'Reading PDF…', err: false })
-    setBusy(true)
+    setBusy(true); setProgress(null)
     try {
-      const parsed = await parsePdf(buf, password)
+      const parsed = await parsePdf(buf, password, (page, pages, phase) => setProgress({ page, pages, phase }))
       if (!parsed.txns.length) {
         setStatus({ msg: 'Opened the PDF but found no transaction rows — is this the M-PESA “Full Statement” export?', err: true })
         return
@@ -46,7 +47,7 @@ export default function Loader({ onParsed, loaded = false, isSample = false, loa
         setStatus({ msg: 'Couldn’t read that PDF: ' + (e.message || e), err: true })
       }
     } finally {
-      setBusy(false)
+      setBusy(false); setProgress(null)
     }
   }
 
@@ -93,13 +94,13 @@ export default function Loader({ onParsed, loaded = false, isSample = false, loa
                 onKeyDown={e => { if (e.key === 'Enter') unlock() }}
                 autoFocus
               />
-              <button className="btn primary" onClick={unlock} disabled={busy || !pw}>{busy ? 'Reading…' : 'Unlock'}</button>
+              <button className="btn primary" onClick={unlock} disabled={busy || !pw}>{busy ? (progress ? `${progress.page}/${progress.pages}` : 'Reading…') : 'Unlock'}</button>
             </div>
             <button className="btn link" onClick={() => { bufRef.current = null; setNeedPw(false); setPw(''); setFileName(''); setStatus({ msg: '', err: false }); fileRef.current?.click() }}>Choose a different file</button>
           </div>
         ) : (
           <div className="dz-body">
-            <div className="dz-title">{armed ? 'Release to read it' : busy ? 'Reading your statement…' : 'Drop your M-PESA statement here'}</div>
+            <div className="dz-title">{armed ? 'Release to read it' : busy ? (progress ? (progress.phase === 'parsing' ? 'Sorting the transactions…' : `Reading page ${progress.page} of ${progress.pages}…`) : 'Reading your statement…') : 'Drop your M-PESA statement here'}</div>
             <div className="dz-sub">{armed ? 'dondosha hapa' : <>or <em>dondosha hapa</em> — drag the PDF anywhere into this box</>}</div>
             <button type="button" className="btn primary dz-cta" tabIndex={-1} disabled={busy}>
               <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 11V3m0 0L4.5 6.5M8 3l3.5 3.5M3 13h10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -108,7 +109,7 @@ export default function Loader({ onParsed, loaded = false, isSample = false, loa
             <div className="dz-hint">{loaded ? (isSample ? 'Drop your own statement to replace the sample' : 'Drop another statement to replace the one loaded') : 'PDF · the “M-PESA Full Statement” Safaricom emails you'}</div>
           </div>
         )}
-        {busy && <div className="dz-progress" aria-hidden="true"><span /></div>}
+        {busy && <div className="dz-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={progress ? Math.round((progress.page / progress.pages) * 100) : undefined} aria-label="Reading the statement"><span className={progress ? 'det' : ''} style={progress ? { width: Math.round((progress.page / progress.pages) * 100) + '%' } : undefined} /></div>}
       </div>
       <input
         type="file" id="fileInput" ref={fileRef}
