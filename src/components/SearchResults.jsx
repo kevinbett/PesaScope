@@ -3,7 +3,7 @@ import { titleCase } from '../lib/insights.js'
 import HBars from './HBars.jsx'
 import TxnTable from './TxnTable.jsx'
 
-export default function SearchResults({ q, result, cat, setCat, setQ, showTip, hideTip, onPick, meta }) {
+export default function SearchResults({ q, result, cat, setCat, setQ, showTip, hideTip, onPick, meta, context }) {
   const r = result
   const tiles = [
     { lbl: 'You sent', v: fmt(r.sent), sub: `KES · ${r.sentN} transfer${r.sentN === 1 ? '' : 's'} to people`, cls: '' },
@@ -55,7 +55,7 @@ export default function SearchResults({ q, result, cat, setCat, setQ, showTip, h
       )}
       <section className="panel">
         <h2>Matching transactions</h2>
-        <TxnTable txns={r.rows} cat={cat} setCat={setCat} title={'Transactions matching ' + q} onPick={onPick} meta={meta} />
+        <TxnTable txns={r.rows} cat={cat} setCat={setCat} title={'Transactions matching “' + q + '”'} onPick={onPick} meta={meta} context={context} />
       </section>
     </div>
   )
