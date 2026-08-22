@@ -470,3 +470,22 @@ tr.day-row + tr.txn-row td { border-top: none; }
 /* expanded detail stays within the visible part of a horizontally-scrolling table */
 .detail { position: sticky; left: 0; box-sizing: border-box; }
 @media (max-width: 780px) { .detail { max-width: calc(100vw - 58px); } }
+/* ---------- expand / collapse motion ---------- */
+tr.txn-row .chev { transition: transform .28s cubic-bezier(.2,.7,.2,1), color .15s; }
+tr.txn-row .chev.down { transform: rotate(90deg); }
+tr.txn-row td { transition: background .25s ease; }
+/* the panel unfolds via the grid-rows trick so the height animates without knowing it */
+.detail-wrap { display: grid; grid-template-rows: 1fr; animation: unfold .32s cubic-bezier(.2,.7,.2,1) both; }
+.detail-wrap > .detail { min-height: 0; overflow: hidden; animation: settle .36s cubic-bezier(.2,.7,.2,1) both; }
+tr.detail-row.leaving .detail-wrap { animation: fold .26s cubic-bezier(.4,0,.6,1) both; }
+tr.detail-row.leaving .detail-wrap > .detail { animation: unsettle .22s ease both; }
+@keyframes unfold { from { grid-template-rows: 0fr; } to { grid-template-rows: 1fr; } }
+@keyframes fold { from { grid-template-rows: 1fr; } to { grid-template-rows: 0fr; } }
+@keyframes settle { from { opacity: 0; transform: translateY(-6px); } 40% { opacity: 0; } to { opacity: 1; transform: translateY(0); } }
+@keyframes unsettle { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-4px); } }
+tr.detail-row td { padding-top: 0; padding-bottom: 0; }
+.detail { padding-bottom: 14px; }
+@media (prefers-reduced-motion: reduce) {
+  .detail-wrap, .detail-wrap > .detail, tr.detail-row.leaving .detail-wrap, tr.detail-row.leaving .detail-wrap > .detail { animation: none; }
+  tr.txn-row .chev { transition: none; }
+}
