@@ -105,7 +105,7 @@ export default function Dashboard({ data, isSample, onLoadOwn, mem, onRemoveStat
 
       {!result && (
         <nav className="jumpbar" aria-label="Jump to section">
-          {[['overview', 'Overview'], ['trends', 'Months'], ['transactions', 'Transactions'], ['people', 'People'], ['habits', 'Habits'], ['merchants', 'Merchants'], ['regular', 'Regular'], ['charges', 'Charges']].map(([id, l]) => (
+          {[['overview', 'Overview'], ['transactions', 'Transactions'], ['people', 'People'], ['habits', 'Habits'], ['merchants', 'Merchants'], ['regular', 'Regular'], ['trends', 'Months'], ['charges', 'Charges']].map(([id, l]) => (
             <button key={id} className="jump" onClick={() => jump(id)}>{l}</button>
           ))}
         </nav>
@@ -134,8 +134,6 @@ export default function Dashboard({ data, isSample, onLoadOwn, mem, onRemoveStat
             </section>
           </div>
 
-          <Trends rows={trends} monthKey={monthKey} onPick={setMonthKey} />
-
           <Section id="transactions" title="Transactions" innerRef={txnsRef}>
             <TxnTable txns={txns} cat={cat} setCat={setCat} onPick={pick} meta={data.meta} context={monthKey === 'all' ? '' : monthLbl(monthKey)} />
           </Section>
@@ -152,6 +150,8 @@ export default function Dashboard({ data, isSample, onLoadOwn, mem, onRemoveStat
 
           <Subscriptions items={subs} onPick={pick} />
           <Review items={review} mem={mem} />
+
+          <Trends rows={trends} monthKey={monthKey} onPick={setMonthKey} />
 
           <Charges ref={chargesRef} report={charges} onShowAll={() => pickCat('Charges & fees')} onPick={pick} showTip={showTip} hideTip={hideTip} />
         </>
