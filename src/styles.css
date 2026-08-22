@@ -238,8 +238,9 @@ footer { margin-top: 28px; color: var(--ink-3); font-size: 12.5px; max-width: 68
 .prow:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .prank { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 12px; color: var(--ink-3); text-align: right; }
 .pmain { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.pname { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ptag { display: inline-block; margin-left: 8px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 1px 7px; vertical-align: 1px; }
+.pname { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ptext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ptag { display: inline-block; flex-shrink: 0; margin-left: 0; font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 1px 7px; vertical-align: 1px; }
 .pmeta { font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pmeta .mono { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; }
 .pbar { display: block; height: 4px; border-radius: 999px; background: var(--grid); margin-top: 3px; overflow: hidden; }
@@ -441,3 +442,15 @@ tr.detail-row td { padding: 0 0 14px; background: var(--accent-soft); white-spac
 @media (max-width: 780px) {
   .detail { grid-template-columns: 1fr; padding-left: 12px; padding-right: 12px; }
 }
+/* ---------- sample banner ---------- */
+.sample-banner {
+  position: sticky; top: 8px; z-index: 20;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px;
+  margin-top: 18px; padding: 10px 14px; border-radius: 12px;
+  background: #FFF3D6; color: #5A3B00; border: 1px solid #F0C96B;
+  box-shadow: 0 8px 24px -16px rgb(0 0 0 / 0.4); font-size: 13.5px;
+}
+.sample-banner .btn { background: #5A3B00; color: #FFF3D6; border-color: #5A3B00; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sample-banner { background: #3B2F12; color: #F6DFA5; border-color: #7A5A14; } :root:not([data-theme="light"]) .sample-banner .btn { background: #F6DFA5; color: #3B2F12; border-color: #F6DFA5; } }
+:root[data-theme="dark"] .sample-banner { background: #3B2F12; color: #F6DFA5; border-color: #7A5A14; }
+:root[data-theme="dark"] .sample-banner .btn { background: #F6DFA5; color: #3B2F12; border-color: #F6DFA5; }

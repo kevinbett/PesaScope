@@ -24,7 +24,7 @@ export default function Merchants({ id, merchants, onPick }) {
             <button className="prow" onClick={() => onPick(m)} title={'Show every payment to ' + titleCase(m.key)}>
               <span className="prank">{start + i + 1}</span>
               <span className="pmain">
-                <span className="pname">{titleCase(m.key)}<span className="ptag">{m.cat.replace(' (Till)', '')}</span></span>
+                <span className="pname"><span className="ptext">{titleCase(m.key)}</span><span className="ptag">{m.cat.replace(' (Till)', '')}</span></span>
                 <span className="pmeta">
                   {m.n} payment{m.n === 1 ? '' : 's'}{m.code ? ` · ${m.cat === 'PayBill' ? 'PayBill' : 'Till'} ${m.code}` : ''}
                   {m.fulizaN ? ` · ${m.fulizaN} on Fuliza` : ''}{m.fees > 0 ? ` · KES ${fmt(m.fees)} fees` : ''} · last {m.last}

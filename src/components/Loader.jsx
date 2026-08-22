@@ -3,6 +3,7 @@ import { parsePdf, isPasswordError } from '../lib/parser.js'
 import { makeSample } from '../lib/sample.js'
 
 export default function Loader({ onParsed }) {
+  const clearShown = () => onParsed(null, false)
   const [armed, setArmed] = useState(false)
   const [needPw, setNeedPw] = useState(false)
   const [pw, setPw] = useState('')
@@ -30,8 +31,8 @@ export default function Loader({ onParsed }) {
         setNeedPw(true)
         setStatus({
           msg: password
-            ? 'That password didn’t work — try again. It’s usually your national ID number.'
-            : 'This statement is password-protected — enter the password to unlock it.',
+            ? 'That PIN didn’t work — check the SMS Safaricom sent when you requested the statement and try again.'
+            : 'This statement is locked — enter the PIN from Safaricom’s SMS to open it.',
           err: !!password,
         })
       } else {
@@ -49,12 +50,13 @@ export default function Loader({ onParsed }) {
       return
     }
     setFileName(file.name)
+    clearShown()
     const rd = new FileReader()
     rd.onload = () => { bufRef.current = rd.result; tryOpen(rd.result, pw) }
     rd.readAsArrayBuffer(file)
   }
 
-  const unlock = () => { if (bufRef.current) tryOpen(bufRef.current, pw) }
+  const unlock = () => { if (bufRef.current) { clearShown(); tryOpen(bufRef.current, pw) } }
 
   return (
     <section className="panel" id="loader">
@@ -86,7 +88,7 @@ export default function Loader({ onParsed }) {
               />
               <button className="btn primary" onClick={unlock} disabled={busy || !pw}>{busy ? 'Reading…' : 'Unlock'}</button>
             </div>
-            <button className="btn link" onClick={() => { setNeedPw(false); setPw(''); setStatus({ msg: '', err: false }); fileRef.current?.click() }}>Choose a different file</button>
+            <button className="btn link" onClick={() => { bufRef.current = null; setNeedPw(false); setPw(''); setFileName(''); setStatus({ msg: '', err: false }); fileRef.current?.click() }}>Choose a different file</button>
           </div>
         ) : (
           <div className="dz-body">
