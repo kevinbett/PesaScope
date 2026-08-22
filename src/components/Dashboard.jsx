@@ -15,7 +15,6 @@ import Section from './Section.jsx'
 function Tiles({ txns, people, onCharges }) {
   const inn = txns.reduce((s, t) => s + t.paidIn, 0)
   const out = txns.reduce((s, t) => s + t.withdrawn, 0)
-  const fees = txns.filter(t => t.isCharge).reduce((s, t) => s + t.withdrawn, 0)
   const fuliza = txns.filter(t => t.type === 'Fuliza draw').reduce((s, t) => s + t.paidIn, 0)
   const sentP = people.reduce((s, p) => s + p.sent, 0), recvP = people.reduce((s, p) => s + p.recv, 0)
   const net = inn - out
@@ -25,7 +24,6 @@ function Tiles({ txns, people, onCharges }) {
     { lbl: 'Net', sw: 'salio', v: (net >= 0 ? '+' : '−') + fmt(Math.abs(net)), cls: net >= 0 ? 'pos' : 'negv', sub: 'KES' },
     { lbl: 'Sent to people', sw: 'ulizotuma', v: fmt(sentP), cls: '', sub: `KES · ${people.filter(p => p.sent > 0).length} people` },
     { lbl: 'Received from people', sw: 'ulizopokea', v: fmt(recvP), cls: 'pos', sub: `KES · ${people.filter(p => p.recv > 0).length} people` },
-    { lbl: 'Charges & fees', sw: 'makato', v: fmt(fees), cls: fees > 0 ? 'negv' : '', sub: out ? 'KES · ' + (fees / out * 100).toFixed(1) + '% of outflow · see breakdown ↓' : 'KES', onClick: onCharges },
     { lbl: 'Fuliza borrowed', sw: 'deni la Fuliza', v: fmt(fuliza), cls: '', sub: fuliza ? 'KES · ' + txns.filter(t => t.type === 'Fuliza draw').length + ' draws' : 'none this period' },
   ]
   return (

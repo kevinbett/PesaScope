@@ -17,6 +17,10 @@ export default function TxnTable({ txns, cat, setCat, title, onPick, meta, conte
   const [dir, setDir] = useState('all')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
+  const [showFees, setShowFees] = useState(false)
+  const feesVisible = showFees || cat === 'Charges & fees'
+  // with fee rows hidden, each row's fee is folded into its Out so totals stay truthful
+  const outOf = t => t.withdrawn + (feesVisible ? 0 : (t.fee || 0))
   const scrollerRef = useRef(null)
   const goPage = p => { setPage(p); setOpenKey(null); setClosingKey(null); scrollerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }
 
@@ -47,19 +51,19 @@ export default function TxnTable({ txns, cat, setCat, title, onPick, meta, conte
   }, [txns])
 
   const rows = useMemo(() => {
-    let r = txns.filter(t => (!cat || t.cat === cat) && (dir === 'all' || (dir === 'in' ? t.paidIn > 0 : t.withdrawn > 0)))
+    let r = txns.filter(t => (!cat || t.cat === cat) && (dir === 'all' || (dir === 'in' ? t.paidIn > 0 : t.withdrawn > 0)) && (feesVisible || !t.isCharge))
     if (sort === 'date') r = r.slice().reverse()
     else r = r.slice().sort((a, b) => (b.paidIn + b.withdrawn) - (a.paidIn + a.withdrawn))
     return r
-  }, [txns, cat, dir, sort])
+  }, [txns, cat, dir, sort, feesVisible])
   const { rows: shown } = pageSlice(rows, page, pageSize)
   const dayTotals = useMemo(() => {
     const m = new Map()
-    for (const t of rows) { const d = m.get(t.date) || { n: 0, inn: 0, out: 0 }; d.n++; d.inn += t.paidIn; d.out += t.withdrawn; m.set(t.date, d) }
+    for (const t of rows) { const d = m.get(t.date) || { n: 0, inn: 0, out: 0 }; d.n++; d.inn += t.paidIn; d.out += outOf(t); m.set(t.date, d) }
     return m
-  }, [rows])
+  }, [rows, feesVisible])
   const grouped = sort === 'date'
-  const totIn = rows.reduce((s, t) => s + t.paidIn, 0), totOut = rows.reduce((s, t) => s + t.withdrawn, 0)
+  const totIn = rows.reduce((s, t) => s + t.paidIn, 0), totOut = rows.reduce((s, t) => s + outOf(t), 0)
 
   const download = async () => {
     const ok = await saveTextFile('pesascope-' + (cat ? cat.toLowerCase().replace(/[^a-z]+/g, '-') : 'transactions') + '.csv', toCsv(rows))
@@ -84,6 +88,7 @@ export default function TxnTable({ txns, cat, setCat, title, onPick, meta, conte
           <button aria-pressed={sort === 'date'} onClick={() => { setSort('date'); setPage(1) }}>Newest</button>
           <button aria-pressed={sort === 'amount'} onClick={() => { setSort('amount'); setPage(1) }}>Largest</button>
         </div>
+        <label className="fee-toggle"><input type="checkbox" checked={feesVisible} disabled={cat === 'Charges & fees'} onChange={e => { setShowFees(e.target.checked); setPage(1) }} /> Show fee rows</label>
         <button className="btn small" onClick={download} disabled={!rows.length}>⤓ CSV ({rows.length})</button>
         <button className="btn small" disabled={!rows.length} onClick={() => {
           const filters = [context, cat, dir === 'in' ? 'Money in only' : dir === 'out' ? 'Money out only' : ''].filter(Boolean)
@@ -96,7 +101,7 @@ export default function TxnTable({ txns, cat, setCat, title, onPick, meta, conte
       <div className="table-scroller" ref={scrollerRef}>
         <table aria-label={title || 'Transactions'}>
           <thead>
-            <tr><th className="chev-col" aria-label="Expand"></th><th>Date</th><th>Type</th><th>Who / what</th><th>Details</th><th className="amt">In</th><th className="amt">Out</th><th className="amt">Fee</th></tr>
+            <tr><th className="chev-col" aria-label="Expand"></th><th>Date</th><th>Type</th><th>Who / what</th><th>Details</th><th className="amt">In</th><th className="amt">Out</th></tr>
           </thead>
           <tbody>
             {shown.map((t, i) => {
@@ -110,7 +115,7 @@ export default function TxnTable({ txns, cat, setCat, title, onPick, meta, conte
                 <Fragment key={t.receipt + i}>
                   {newDay && (
                     <tr className="day-row" aria-label={dh.long}>
-                      <td colSpan="8">
+                      <td colSpan="7">
                         <span className="day-name">{dh.rel ? <><strong>{dh.rel}</strong> · {dh.long}</> : dh.long}</span>
                         <span className="day-meta">{dt.n} transaction{dt.n === 1 ? '' : 's'}{dt.inn ? <> · <span className="in">+{fmt(dt.inn)}</span></> : null}{dt.out ? <> · −{fmt(dt.out)}</> : null}</span>
                       </td>
@@ -130,11 +135,10 @@ export default function TxnTable({ txns, cat, setCat, title, onPick, meta, conte
                     <td className="details" title={t.details + ' · ' + t.receipt}>{t.details.length > 64 ? t.details.slice(0, 63) + '…' : t.details}</td>
                     <td className="amt in">{t.paidIn ? fmt(t.paidIn) : ''}</td>
                     <td className="amt">{t.withdrawn ? fmt(t.withdrawn) : ''}</td>
-                    <td className="amt fee">{t.fee ? fmt(t.fee) : ''}</td>
                   </tr>
                   {open && (
                     <tr className={'detail-row' + (closing ? ' leaving' : '')}>
-                      <td colSpan="8">
+                      <td colSpan="7">
                         <div className="detail-wrap"><div className="detail">
                           <div className="detail-main">
                             <div className="detail-amount">
@@ -183,7 +187,7 @@ export default function TxnTable({ txns, cat, setCat, title, onPick, meta, conte
           </tbody>
           {rows.length > 0 && (
             <tfoot>
-              <tr><td colSpan="5">{rows.length} row{rows.length === 1 ? '' : 's'}</td><td className="amt in">{fmt(totIn)}</td><td className="amt">{fmt(totOut)}</td><td className="amt fee">{fmt(rows.reduce((s, t) => s + (t.fee || 0), 0))}</td></tr>
+              <tr><td colSpan="5">{rows.length} row{rows.length === 1 ? '' : 's'}{!feesVisible ? ' · fees included in Out' : ''}</td><td className="amt in">{fmt(totIn)}</td><td className="amt">{fmt(totOut)}</td></tr>
             </tfoot>
           )}
         </table>

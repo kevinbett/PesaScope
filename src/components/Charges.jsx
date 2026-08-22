@@ -68,7 +68,7 @@ const Charges = forwardRef(function Charges({ report, onShowAll, onPick, showTip
 
           {r.topPeople.length > 0 && (
             <>
-              <h3>Sending to these people cost the most</h3>
+              <h3>People you send to most — and what it cost</h3>
               <ol className="plist compact">
                 {r.topPeople.map((p, i) => (
                   <li key={p.key}>
@@ -76,9 +76,9 @@ const Charges = forwardRef(function Charges({ report, onShowAll, onPick, showTip
                       <span className="prank">{i + 1}</span>
                       <span className="pmain">
                         <span className="pname">{titleCase(p.name)}</span>
-                        <span className="pmeta">{p.n} send{p.n === 1 ? '' : 's'} · KES {fmt(p.sent)} sent · {((p.fees / p.sent) * 100).toFixed(1)}% in fees</span>
+                        <span className="pmeta">{p.n} send{p.n === 1 ? '' : 's'} · fees KES {fmt(p.fees)} ({((p.fees / p.sent) * 100).toFixed(1)}%)</span>
                       </span>
-                      <span className="pamt">KES {fmt(p.fees)}<small>in fees</small></span>
+                      <span className="pamt">KES {fmt(p.sent)}<small>sent</small></span>
                     </button>
                   </li>
                 ))}

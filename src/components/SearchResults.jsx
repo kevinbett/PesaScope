@@ -28,7 +28,6 @@ export default function SearchResults({ q, result, cat, setCat, setQ, showTip, h
     { lbl: 'You received', v: fmt(r.recv), sub: `KES · ${r.recvN} receipt${r.recvN === 1 ? '' : 's'} from people`, cls: 'pos' },
     { lbl: 'All money out', v: fmt(r.out), sub: `KES · ${r.rows.filter(t => t.withdrawn > 0).length} rows incl. bills & fees`, cls: '' },
     { lbl: 'All money in', v: fmt(r.inn), sub: `KES · ${r.rows.filter(t => t.paidIn > 0).length} rows`, cls: 'pos' },
-    { lbl: 'Fees on these', v: fmt(r.fees), sub: 'KES · charges linked to matches', cls: r.fees ? 'negv' : '' },
   ]
   const catTotal = r.cats.out.reduce((s, [, v]) => s + v, 0) || 1
   return (

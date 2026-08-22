@@ -33,7 +33,6 @@ export default function People({ id, title, sub, people, field, countField, onPi
                 <span className="pmeta">
                   {p.phone ? <span className="mono">{p.phone}</span> : null}
                   {p.phone ? ' · ' : ''}{p[countField]} {p[countField] === 1 ? 'time' : 'times'}
-                  {field === 'sent' && p.fees > 0 ? ` · KES ${fmt(p.fees)} in fees` : ''}
                   {field === 'sent' && p.recv > 0 ? ` · received KES ${fmt(p.recv)} back` : ''}
                   {field === 'recv' && p.sent > 0 ? ` · you sent KES ${fmt(p.sent)}` : ''}
                   {' · last ' + p.last}
