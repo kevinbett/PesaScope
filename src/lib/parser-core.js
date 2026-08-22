@@ -84,6 +84,9 @@ const INVEST = /capital\b|unit trust|\bmmf\b|money market|ziidi|cic asset|britam
 const INSURANCE = /insurance|assurance|jubilee|nhif|\bsha\b|madison|britam life/i
 const BANK = /\bbank\b|equity paybill|\bc2b\b|credit card|prepaid card|\bkcb\b(?! ?m-?pesa)|\babsa\b|\bncba\b|stanbic|co-?operative|\bcoop\b|family bank|\bdtb\b|diamond trust|standard chartered|\bi ?& ?m\b|\bim bank\b|\bgtbank\b|\bsbm\b|\bhfc\b|sidian|prime bank|gulf african|\bboa\b|\buba\b|\bimt\b|mtos/i
 const NOT_BANK = /lipa na kcb|kcb m-?pesa/i
+// till merchants only count as a bank when they say so explicitly — short abbreviations
+// (SBM, UBA, BOA, HFC…) appear inside ordinary shop names
+const BANK_STRICT = /\bbank\b|\bc2b\b|credit card|prepaid card|equity paybill/i
 
 function refine(r) {
   const who = r.who || ''
@@ -93,7 +96,7 @@ function refine(r) {
     else if (INVEST.test(who) && !/insurance/i.test(who)) { r.cat = 'Savings & investments'; r.type = r.type === 'Business payment' ? 'Investment payout' : 'Investment deposit' }
     else if (INSURANCE.test(who)) { r.cat = 'Insurance'; r.type = 'Insurance premium' }
     else if (r.type === 'International transfer') { /* remittances stay under Received */ }
-    else if (BANK.test(who) && !NOT_BANK.test(who)) { r.cat = 'Bank & cards'; r.type = r.type === 'PayBill' ? 'To bank / card' : r.type }
+    else if ((r.cat === 'Buy Goods (Till)' ? BANK_STRICT : BANK).test(who) && !NOT_BANK.test(who)) { r.cat = 'Bank & cards'; r.type = r.type === 'PayBill' ? 'To bank / card' : r.type }
     else if (r.cat === 'From bank') { r.cat = 'Bank & cards' }
   }
   return r
@@ -284,8 +287,10 @@ export function linkCharges(txns) {
   }
   for (const t of txns) t.fee = 0
   for (const c of txns) if (c.isCharge) {
-    const parents = (byReceipt.get(c.receipt) || []).filter(p => p.withdrawn > 0 && !p.fuliza)
-    const target = parents[0] || (byReceipt.get(c.receipt) || [])[0]
+    const all = byReceipt.get(c.receipt) || []
+    // the fee belongs to the money-out row under the same receipt — a Fuliza-funded
+    // send still owns its fee; only fall back to the overdraft row when nothing else exists
+    const target = all.find(p => p.withdrawn > 0 && p.cat !== 'Fuliza') || all.find(p => p.withdrawn > 0) || all[0]
     if (target) { target.fee += c.withdrawn; c.parentWho = target.who; c.parentKey = target.key }
   }
 }

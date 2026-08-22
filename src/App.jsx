@@ -16,9 +16,11 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  // parsed === null means "a new file is being read": drop whatever is on screen
+  // immediately so stale (or sample) data can never be mistaken for the new statement
   const onParsed = (parsed, sample) => {
     setData(parsed)
-    setIsSample(sample)
+    setIsSample(!!parsed && !!sample)
   }
 
   useEffect(() => {
@@ -42,7 +44,7 @@ export default function App() {
         <Loader key={resetTick} onParsed={onParsed} />
 
         <div ref={dashRef}>
-          {data && <Dashboard key={resetTick + ':' + isSample + ':' + data.txns.length} data={data} isSample={isSample} />}
+          {data && <Dashboard key={resetTick + ':' + isSample + ':' + data.txns.length} data={data} isSample={isSample} onLoadOwn={() => document.getElementById('loader')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />}
         </div>
 
         <footer>

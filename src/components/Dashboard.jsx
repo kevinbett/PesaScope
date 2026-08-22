@@ -47,7 +47,7 @@ function Tiles({ txns, people, onCharges }) {
   )
 }
 
-export default function Dashboard({ data, isSample }) {
+export default function Dashboard({ data, isSample, onLoadOwn }) {
   const [monthKey, setMonthKey] = useState('all')
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('')
@@ -85,11 +85,16 @@ export default function Dashboard({ data, isSample }) {
 
   return (
     <div id="dash" className="show">
+      {isSample && (
+        <div className="sample-banner" role="status">
+          <span><strong>Sample data</strong> — these people, merchants and amounts are made up. Nothing here is from a real statement.</span>
+          <button className="btn small" onClick={onLoadOwn}>Load my statement ↑</button>
+        </div>
+      )}
       <div className="dash-head">
         <span className="who">{m.name || 'Your statement'}</span>
         <span className="meta">{(m.phone ? m.phone + ' · ' : '') + period}</span>
         <span className="meta">{txns.length} transactions</span>
-        {isSample && <span className="sample-tag show">Sample data — not your statement</span>}
       </div>
       {months.length > 1 && (
         <div className="months">

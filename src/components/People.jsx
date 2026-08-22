@@ -29,7 +29,7 @@ export default function People({ id, title, sub, people, field, countField, onPi
             <button className="prow" onClick={() => onPick(p)} title={'Show every transaction with ' + titleCase(p.name)}>
               <span className="prank">{start + i + 1}</span>
               <span className="pmain">
-                <span className="pname">{titleCase(p.name)}{p.intl && <span className="ptag">intl</span>}</span>
+                <span className="pname"><span className="ptext">{titleCase(p.name)}</span>{p.intl && <span className="ptag">intl</span>}</span>
                 <span className="pmeta">
                   {p.phone ? <span className="mono">{p.phone}</span> : null}
                   {p.phone ? ' · ' : ''}{p[countField]} {p[countField] === 1 ? 'time' : 'times'}
