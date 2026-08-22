@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { fmt, monthOf, monthLbl } from '../lib/format.js'
-import { buildPeople, topSentTo, topReceivedFrom, topMerchants, categoryTotals, habits, search, chargesReport } from '../lib/insights.js'
+import { buildPeople, topSentTo, topReceivedFrom, topMerchants, categoryTotals, habits, search, chargesReport, splitTerms, titleCase } from '../lib/insights.js'
 import { useTooltip } from './Tooltip.jsx'
 import HBars from './HBars.jsx'
 import FlowChart from './FlowChart.jsx'
@@ -85,7 +85,7 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
 
   // everything currently narrowing the view, each removable on its own
   const active = [
-    q ? { key: 'q', label: '“' + q + '”', clear: () => setQ('') } : null,
+    ...splitTerms(q).map(term => ({ key: 'q:' + term, label: /^\d/.test(term) ? term : titleCase(term), clear: () => setQ(splitTerms(q).filter(t => t !== term).join(', ')) })),
     monthKey !== 'all' ? { key: 'm', label: monthLbl(monthKey), clear: () => setMonthKey('all') } : null,
     cat ? { key: 'c', label: cat, clear: () => setCat('') } : null,
   ].filter(Boolean)
@@ -118,7 +118,7 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
         <span className="sicon" aria-hidden="true">⌕</span>
         <input
           type="search" value={q} onChange={e => setQ(e.target.value)}
-          placeholder="Search a name, phone, PayBill, till, receipt… e.g. “faith”"
+          placeholder="Exact name, phone, till, PayBill or receipt — several with commas: Faith Kamande, 0722***481"
           aria-label="Search transactions"
         />
         {q && <button className="sclear" onClick={() => setQ('')} aria-label="Clear search">✕</button>}
