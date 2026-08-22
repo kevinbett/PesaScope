@@ -125,10 +125,12 @@ export function habits(txns, people) {
   return out
 }
 
-/** normalise a term or field for exact comparison */
-const norm = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim()
+/** exact on letters and digits only: case, spaces and punctuation don't count */
+const norm = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
 const digitsOf = s => (s || '').replace(/\D/g, '')
-export const splitTerms = q => q.split(',').map(t => norm(t)).filter(Boolean)
+/** a phone's identity: digits without the 254 / 0 prefix, asterisks dropped */
+const phoneKey = s => digitsOf(s).replace(/^(?:254|0)/, '')
+export const splitTerms = q => q.split(',').map(t => t.trim()).filter(t => norm(t))
 
 /**
  * Exact-match search, OR'd across comma-separated terms.
@@ -138,12 +140,12 @@ export const splitTerms = q => q.split(',').map(t => norm(t)).filter(Boolean)
 export function search(txns, q) {
   const terms = splitTerms(q)
   if (!terms.length) return null
-  const matchTerm = (t, term) => {
-    const d = digitsOf(term)
-    if (norm(t.who) === term || brandKey(t.who).toLowerCase() === term) return true
+  const matchTerm = (t, rawTerm) => {
+    const term = norm(rawTerm)
+    if (!term) return false
+    if (norm(t.who) === term || norm(brandKey(t.who)) === term) return true
     if (t.isCharge && t.parentWho && norm(t.parentWho) === term) return true
-    if (t.phone && d.length >= 6 && digitsOf(t.phone) === d) return true
-    if (t.phone && norm(t.phone) === term) return true
+    if (t.phone && phoneKey(t.phone).length >= 6 && phoneKey(t.phone) === phoneKey(rawTerm)) return true
     if (t.code && norm(t.code) === term) return true
     if (t.account && norm(t.account) === term) return true
     if (norm(t.receipt) === term) return true
@@ -163,8 +165,8 @@ export function search(txns, q) {
     for (const t of txns) {
       const cands = [t.who, t.phone, t.code].filter(Boolean)
       for (const c of cands) {
-        const n = norm(c)
-        if (n.includes(term) || (term.length >= 4 && digitsOf(c).includes(digitsOf(term)) && digitsOf(term).length >= 4)) {
+        const n = norm(c), nt = norm(term)
+        if (nt.length >= 3 && (n.includes(nt) || (digitsOf(term).length >= 4 && digitsOf(c).includes(digitsOf(term))))) {
           const k = t.phone && n === norm(t.phone) ? t.phone : c
           seen.set(k, (seen.get(k) || 0) + 1)
         }
