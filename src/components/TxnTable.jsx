@@ -10,13 +10,15 @@ const CAT_ORDER = ['Send money', 'Received', 'Buy Goods (Till)', 'PayBill', 'Ban
 
 export default function TxnTable({ txns, cat, setCat, title, onPick, meta, context }) {
   const [openKey, setOpenKey] = useState(null)
+  const [closingKey, setClosingKey] = useState(null)
   const [copied, setCopied] = useState('')
+  const LEAVE_MS = 260
   const [sort, setSort] = useState('date')
   const [dir, setDir] = useState('all')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
   const scrollerRef = useRef(null)
-  const goPage = p => { setPage(p); setOpenKey(null); scrollerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }
+  const goPage = p => { setPage(p); setOpenKey(null); setClosingKey(null); scrollerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }
 
   const byReceipt = useMemo(() => {
     const m = new Map()
@@ -27,9 +29,15 @@ export default function TxnTable({ txns, cat, setCat, title, onPick, meta, conte
   const shortName = t => { const n = titleCase(t.who); return (t.cat === 'Send money' || t.cat === 'Received') && !t.type.includes('International') ? n.split(' ')[0] : (n.length > 22 ? n.slice(0, 21) + '…' : n) }
   const toggle = t => {
     const k = rowKey(t)
-    const opening = openKey !== k
-    setOpenKey(opening ? k : null)
-    if (opening) setTimeout(() => document.querySelector('tr.detail-row')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 30)
+    if (openKey === k) {
+      // play the leave animation, then unmount
+      setClosingKey(k)
+      setTimeout(() => { setOpenKey(null); setClosingKey(null) }, LEAVE_MS)
+      return
+    }
+    setClosingKey(null)
+    setOpenKey(k)
+    setTimeout(() => document.querySelector('tr.detail-row')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 60)
   }
   const copy = async (text, label) => { try { await navigator.clipboard.writeText(text); setCopied(label); setTimeout(() => setCopied(''), 1400) } catch {} }
 
@@ -93,6 +101,7 @@ export default function TxnTable({ txns, cat, setCat, title, onPick, meta, conte
           <tbody>
             {shown.map((t, i) => {
               const open = openKey === rowKey(t)
+              const closing = closingKey === rowKey(t)
               const linked = (byReceipt.get(t.receipt) || []).filter(x => x !== t)
               const newDay = grouped && (i === 0 || shown[i - 1].date !== t.date)
               const dh = newDay ? dayHeading(t.date) : null
@@ -108,13 +117,13 @@ export default function TxnTable({ txns, cat, setCat, title, onPick, meta, conte
                     </tr>
                   )}
                   <tr
-                    className={'txn-row' + (t.isCharge ? ' charge-row' : '') + (open ? ' open' : '')}
+                    className={'txn-row' + (t.isCharge ? ' charge-row' : '') + (open && !closing ? ' open' : '')}
                     onClick={() => toggle(t)}
                     tabIndex={0}
                     aria-expanded={open}
                     onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(t) } }}
                   >
-                    <td className="chev-col"><span className="chev" aria-hidden="true">{open ? '▾' : '▸'}</span></td>
+                    <td className="chev-col"><span className={'chev' + (open && !closing ? ' down' : '')} aria-hidden="true">▸</span></td>
                     <td className="mono">{t.date}<span className="tsub">{t.time.slice(0, 5)}</span></td>
                     <td><span className="catpill">{t.type}</span>{t.fuliza && t.cat !== 'Fuliza' ? <span className="catpill fz">Fuliza</span> : null}</td>
                     <td className="who">{t.isCharge && t.parentWho ? <span className="muted">fee · {titleCase(t.parentWho)}</span> : titleCase(t.who)}{t.phone ? <span className="tsub mono">{t.phone}</span> : t.code ? <span className="tsub mono">{t.code}{t.account ? ' · ' + t.account : ''}</span> : null}</td>
@@ -124,9 +133,9 @@ export default function TxnTable({ txns, cat, setCat, title, onPick, meta, conte
                     <td className="amt fee">{t.fee ? fmt(t.fee) : ''}</td>
                   </tr>
                   {open && (
-                    <tr className="detail-row">
+                    <tr className={'detail-row' + (closing ? ' leaving' : '')}>
                       <td colSpan="8">
-                        <div className="detail">
+                        <div className="detail-wrap"><div className="detail">
                           <div className="detail-main">
                             <div className="detail-amount">
                               <span className={'big ' + (t.paidIn ? 'in' : '')}>{t.paidIn ? '+' : '−'} KES {fmt(t.paidIn || t.withdrawn)}</span>
@@ -164,7 +173,7 @@ export default function TxnTable({ txns, cat, setCat, title, onPick, meta, conte
                             </button>
                             <button className="btn small" onClick={e => { e.stopPropagation(); copy(`${t.date} ${t.time} · ${t.receipt} · ${t.details} · ${t.paidIn ? '+' : '-'}KES ${fmt(t.paidIn || t.withdrawn)}`, 'row') }}>{copied === 'row' ? 'Copied ✓' : 'Copy details'}</button>
                           </div>
-                        </div>
+                        </div></div>
                       </td>
                     </tr>
                   )}
