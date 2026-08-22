@@ -127,7 +127,7 @@ export function receiptHtml(t, meta) {
   </div>
   <div class="foot"><strong>Reproduced from your M-PESA statement</strong> by PesaScope on this device. This is a copy for your records, not an official Safaricom receipt — the original is in your M-PESA statement under transaction ${esc(t.receipt)}.</div>
 </div>
-<div class="actions"><button onclick="window.print()">Print / Save as PDF</button><button class="ghost" onclick="window.close()">Close</button></div>
+<div class="actions"><button id="print">Print / Save as PDF</button><button class="ghost" id="close">Close</button></div>
 </body></html>`
 }
 
@@ -136,6 +136,8 @@ export function printReceipt(t, meta) {
   const w = window.open('', '_blank')
   if (!w) return false
   w.document.open(); w.document.write(receiptHtml(t, meta)); w.document.close()
+  w.document.getElementById('print')?.addEventListener('click', () => w.print())
+  w.document.getElementById('close')?.addEventListener('click', () => w.close())
   w.focus()
   setTimeout(() => { try { w.print() } catch {} }, 350)
   return true
