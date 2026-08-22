@@ -2,14 +2,14 @@ import { forwardRef } from 'react'
 import { fmt, monthLbl } from '../lib/format.js'
 import { titleCase } from '../lib/insights.js'
 import HBars from './HBars.jsx'
+import Section from './Section.jsx'
 
 const Charges = forwardRef(function Charges({ report, onShowAll, onPick, showTip, hideTip }, ref) {
   const r = report
   const maxM = Math.max(...r.byMonth.map(m => m[1]), 1)
   const typeTotal = r.byType.reduce((s, e) => s + e[1], 0) || 1
   return (
-    <section className="panel charges" ref={ref}>
-      <h2>What M-PESA charged you</h2>
+    <Section id="charges" title="What M-PESA charged you" innerRef={ref} className="charges">
       {r.n === 0 ? <p className="chart-note">No charges in this period.</p> : (
         <>
           <div className="charges-head">
@@ -92,7 +92,7 @@ const Charges = forwardRef(function Charges({ report, onShowAll, onPick, showTip
           </div>
         </>
       )}
-    </section>
+    </Section>
   )
 })
 export default Charges

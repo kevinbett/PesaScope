@@ -332,3 +332,33 @@ tfoot td { font-weight: 600; background: var(--ground); border-top: 1px solid va
 .pg-size { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-3); }
 .pg-size select { padding: 4px 8px; font-size: 12.5px; width: auto; }
 @media (max-width: 640px) { .paginator { justify-content: center; } .pg-size { order: 3; } }
+/* ---------- sections, jump bar, sticky list footer ---------- */
+.section { scroll-margin-top: 12px; }
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.section-toggle { display: flex; align-items: center; gap: 8px; border: none; background: none; padding: 0; margin: 0 0 12px; cursor: pointer; color: inherit; font: inherit; text-align: left; border-radius: 6px; }
+.section-toggle h2 { margin: 0; }
+.section-toggle .chev { color: var(--ink-3); font-size: 13px; width: 12px; }
+.section-toggle:hover h2 { color: var(--accent); }
+.section-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.section.collapsed .section-toggle { margin-bottom: 0; }
+.section.collapsed { padding-bottom: 14px; }
+.jumpbar { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.jump { border: 1px solid var(--line); background: var(--card); color: var(--ink-2); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.jump:hover { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); }
+.jump:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* controls stay on screen while scrolling a long expanded list */
+.list-foot {
+  position: sticky; bottom: 0; z-index: 2;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
+  margin: 8px -20px -20px; padding: 10px 20px 14px;
+  background: var(--card); border-top: 1px solid var(--line); border-radius: 0 0 12px 12px;
+}
+.list-foot .paginator { margin-top: 0; flex: 1; }
+/* long transaction pages scroll inside the table, not the page */
+.table-scroller { max-height: 70vh; overflow: auto; }
+th { position: sticky; top: 0; z-index: 2; border-bottom: none; box-shadow: inset 0 -1px 0 var(--line); }
+@media (max-width: 640px) {
+  .list-foot { margin: 8px -14px -14px; padding: 8px 14px 12px; justify-content: center; }
+  .jumpbar { gap: 5px; }
+  .jump { padding: 4px 10px; font-size: 12px; }
+}

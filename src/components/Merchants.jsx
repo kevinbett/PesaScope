@@ -1,21 +1,23 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { fmt } from '../lib/format.js'
 import Paginator, { pageSlice } from './Paginator.jsx'
+import Section from './Section.jsx'
 import { titleCase } from '../lib/insights.js'
 
-export default function Merchants({ merchants, onPick }) {
+export default function Merchants({ id, merchants, onPick }) {
+  const headRef = useRef(null)
   const [expanded, setExpanded] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   // insight-first: a top-10 by default, the full ranked list (paginated) on request
   const TOP = 10
   const { rows, start } = expanded ? pageSlice(merchants, page, pageSize) : { rows: merchants.slice(0, TOP), start: 0 }
+  const collapse = () => { setExpanded(false); setPage(1); headRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
+  const goPage = p => { setPage(p); headRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
   if (!merchants.length) return null
   const max = Math.max(...merchants.map(m => m.total), 1)
   return (
-    <section className="panel">
-      <h2>Top merchants &amp; bills</h2>
-      <p className="lede">Where the Buy Goods and PayBill money goes, grouped by brand.</p>
+    <Section id={id} title="Top merchants & bills" sub="Where the Buy Goods and PayBill money goes, grouped by brand." innerRef={headRef}>
       <ol className="plist">
         {rows.map((m, i) => (
           <li key={m.key}>
@@ -35,11 +37,11 @@ export default function Merchants({ merchants, onPick }) {
         ))}
       </ol>
       {expanded
-        ? <>
-            <Paginator total={merchants.length} page={page} setPage={setPage} pageSize={pageSize} setPageSize={setPageSize} noun="merchants" />
-            <button className="btn link" onClick={() => { setExpanded(false); setPage(1) }}>Back to top {TOP}</button>
-          </>
+        ? <div className="list-foot">
+            <Paginator total={merchants.length} page={page} setPage={goPage} pageSize={pageSize} setPageSize={setPageSize} sizes={[10, 25, 50]} noun="merchants" />
+            <button className="btn small" onClick={collapse}>▴ Back to top {TOP}</button>
+          </div>
         : merchants.length > TOP && <button className="btn link" onClick={() => setExpanded(true)}>See all {merchants.length.toLocaleString()} merchants</button>}
-    </section>
+    </Section>
   )
 }

@@ -1,9 +1,9 @@
-export default function Habits({ items }) {
+import Section from './Section.jsx'
+
+export default function Habits({ id, items }) {
   if (!items.length) return null
   return (
-    <section className="panel">
-      <h2>Spending habits</h2>
-      <p className="lede">Patterns worth knowing, read straight from your statement.</p>
+    <Section id={id} title="Spending habits" sub="Patterns worth knowing, read straight from your statement.">
       <div className="habits">
         {items.map((h, i) => (
           <div className="habit" key={i}>
@@ -15,6 +15,6 @@ export default function Habits({ items }) {
           </div>
         ))}
       </div>
-    </section>
+    </Section>
   )
 }
