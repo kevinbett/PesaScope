@@ -657,3 +657,16 @@ tr.detail-row td { padding-top: 0; padding-bottom: 0; }
   .sb-long { display: none; } .sb-short { display: inline; }
   .sample-banner .btn { padding: 4px 10px; font-size: 12px; }
 }
+/* ---------- clear vs use: no more ambiguous ✕ ---------- */
+.searchbar .sclear { width: auto; height: 28px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
+.searchbar .suse {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+.searchbar .suse kbd { font: 600 11px/1 "IBM Plex Mono", monospace; background: rgb(0 0 0 / 0.18); border-radius: 4px; padding: 2px 5px; }
+.searchbar.has-tokens .sclear, .searchbar.has-tokens .suse { top: auto; bottom: 12px; transform: none; }
+.suggest li { grid-template-columns: 22px 1fr auto auto; }
+.suggest .s-use { font-size: 11.5px; font-weight: 700; color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+.suggest li.sel .s-use { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+@media (max-width: 640px) { .suggest .s-n { display: none; } .searchbar .sclear span + * { display: none; } }

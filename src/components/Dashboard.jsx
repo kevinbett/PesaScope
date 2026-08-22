@@ -71,15 +71,29 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
   // type-ahead over the whole statement (not the month slice): the fragment is the text after the last comma
   const index = useMemo(() => buildIndex(data.txns), [data])
   const cut = q.lastIndexOf(',')
-  const committed = cut >= 0 ? q.slice(0, cut).split(',').map(t => t.trim()).filter(Boolean) : []
+  const committed = cut >= 0 ? splitTerms(q.slice(0, cut)) : []
   const fragment = (cut >= 0 ? q.slice(cut + 1) : q).replace(/^\s+/, '')
   const labelFor = term => {
     const d = term.replace(/\D/g, '').replace(/^(?:254|0)/, '')
     const hit = d.length >= 6 ? index.find(e => e.kind === 'person' && e.value.replace(/\D/g, '').endsWith(d)) : null
     return hit ? titleCase(hit.label) + ' · ' + hit.value : (/^\d/.test(term) ? term : titleCase(term))
   }
-  const setParts = (terms, frag) => setQ(terms.length ? terms.join(', ') + ', ' + frag : frag)
+  // on commit, a full name that is exactly one person becomes that person's phone —
+  // chips then stand for identities, so a name and its number can never both appear
+  const canon = term => {
+    const k = term.toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (!k || /^\d/.test(k)) return term
+    const hits = index.filter(e => e.kind === 'person' && e.label.toLowerCase().replace(/[^a-z0-9]/g, '') === k)
+    return hits.length === 1 ? hits[0].value : term
+  }
+  const setParts = (terms, frag) => { const t = splitTerms(terms.map(canon).join(', ')); setQ(t.length ? t.join(', ') + ', ' + frag : frag) }
   const removeChip = i => setParts(committed.filter((_, j) => j !== i), fragment)
+  // typing (or pasting) commas in the field commits everything before the last comma
+  const onType = v => {
+    const c = v.lastIndexOf(',')
+    if (c < 0) return setParts(committed, v)
+    setParts([...committed, ...v.slice(0, c).split(',')], v.slice(c + 1).replace(/^\s+/, ''))
+  }
   const sugs = useMemo(() => (sugOpen ? suggest(index, fragment) : []), [index, fragment, sugOpen])
   // a chosen suggestion becomes a committed chip, ready for the next term
   const applySuggestion = e => {
@@ -164,7 +178,7 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
           </span>
         )}
         <input
-          type="search" value={fragment} onChange={e => { setParts(committed, e.target.value); setSugOpen(true); setSugIdx(0) }}
+          type="search" value={fragment} onChange={e => { onType(e.target.value); setSugOpen(true); setSugIdx(0) }}
           onFocus={() => { clearTimeout(blurTimer.current); setSugOpen(true) }}
           onBlur={() => { blurTimer.current = setTimeout(() => setSugOpen(false), 150) }}
           onKeyDown={onSearchKey}
@@ -172,8 +186,11 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
           aria-label="Search transactions" autoComplete="off"
           role="combobox" aria-expanded={sugs.length > 0} aria-controls="suggest-list" aria-autocomplete="list"
         />
-        {q ? <button className="sclear" onClick={() => { setQ(''); setSugOpen(false) }} aria-label="Clear search">✕</button>
-           : <kbd className="skbd" aria-hidden="true">/</kbd>}
+        {sugs.length > 0
+          ? <button className="suse" onMouseDown={e => e.preventDefault()} onClick={() => applySuggestion(sugs[sugIdx])} aria-label="Use the highlighted suggestion">Use <kbd>↵</kbd></button>
+          : q
+            ? <button className="sclear" onClick={() => { setQ(''); setSugOpen(false) }} aria-label="Clear search"><span aria-hidden="true">✕</span> Clear</button>
+            : <kbd className="skbd" aria-hidden="true">/</kbd>}
         {sugs.length > 0 && (
           <ul className="suggest" id="suggest-list" role="listbox">
             {sugs.map((e, i) => (
@@ -182,9 +199,10 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
                 <span className="s-kind" aria-hidden="true">{e.kind === 'person' ? '👤' : '🏪'}</span>
                 <span className="s-main"><span className="s-label">{titleCase(e.label)}</span><span className="s-sub">{e.sub}</span></span>
                 <span className="s-n">{e.n} txn{e.n === 1 ? '' : 's'}</span>
+                <span className="s-use" aria-hidden="true">{i === sugIdx ? 'Use ↵' : 'Use →'}</span>
               </li>
             ))}
-            <li className="s-hint" aria-hidden="true">↑↓ to choose · Enter to use · type a comma to add another</li>
+            <li className="s-hint" aria-hidden="true">↑↓ to move · Enter or click to use · a comma adds another · Esc to keep what you typed</li>
           </ul>
         )}
       </div>
@@ -223,12 +241,13 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
               <p className="chart-note">Outflows by category. Click a bar to filter the transactions below.</p>
             </section>
             <section className="panel" style={{ marginTop: 0 }}>
-              <h2>Daily flow</h2>
+              <h2>Money flow</h2>
               <div className="legend">
                 <span><span className="sw" style={{ background: 'var(--series-in)' }} />Money in</span>
                 <span><span className="sw" style={{ background: 'var(--series-out)' }} />Money out</span>
               </div>
               <FlowChart txns={txns} showTip={showTip} hideTip={hideTip} />
+              <p className="chart-note">In and out per day, week or month depending on the span. Hover or tap a bar.</p>
             </section>
           </div>
 
