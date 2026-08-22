@@ -619,3 +619,10 @@ tr.detail-row td { padding-top: 0; padding-bottom: 0; }
 /* term chips never collide with the summary beneath */
 .termchips { margin-bottom: 12px; }
 .search-lede { margin-top: 0; }
+/* fee-rows toggle in the table controls */
+.fee-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; user-select: none; }
+.fee-toggle input { accent-color: var(--accent); }
+@media (max-width: 640px) {
+  tr.txn-row { grid-template-columns: 14px 1fr auto; grid-template-areas: "chev who amt" "chev typ typ"; }
+  tr.txn-row td.fee { display: none; }
+}

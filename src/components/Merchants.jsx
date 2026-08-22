@@ -27,7 +27,7 @@ export default function Merchants({ id, merchants, onPick }) {
                 <span className="pname"><span className="ptext">{titleCase(m.key)}</span><span className="ptag">{m.cat.replace(' (Till)', '')}</span></span>
                 <span className="pmeta">
                   {m.n} payment{m.n === 1 ? '' : 's'}{m.code ? ` · ${m.cat === 'PayBill' ? 'PayBill' : 'Till'} ${m.code}` : ''}
-                  {m.fulizaN ? ` · ${m.fulizaN} on Fuliza` : ''}{m.fees > 0 ? ` · KES ${fmt(m.fees)} fees` : ''} · last {m.last}
+                  {m.fulizaN ? ` · ${m.fulizaN} on Fuliza` : ''} · last {m.last}
                 </span>
                 <span className="pbar"><span style={{ width: ((m.total / max) * 100).toFixed(1) + '%' }} /></span>
               </span>

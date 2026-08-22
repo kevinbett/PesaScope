@@ -98,14 +98,6 @@ export function habits(txns, people) {
     out.push({ icon: '🆘', title: `Fuliza ${draws.length} times`, body: `KES ${fmt0(sum(draws, t => t.paidIn))} borrowed (largest KES ${fmt0(maxDraw)}); ${funded.length} payments were made while overdrawn.` })
   }
 
-  // fees
-  const fees = txns.filter(t => t.isCharge)
-  if (fees.length) {
-    const feeTotal = sum(fees, t => t.withdrawn)
-    const sendFees = sum(txns.filter(P2P_SEND), t => t.fee || 0)
-    out.push({ icon: '💸', title: `KES ${fmt0(feeTotal)} in charges`, body: `${fees.length} fees — ${((feeTotal / Math.max(1, sum(txns, t => t.withdrawn))) * 100).toFixed(1)}% of all outflow. Sending money to people cost KES ${fmt0(sendFees)} of that.` })
-  }
-
   // people concentration
   if (people?.length) {
     const sent = people.filter(p => p.sent > 0).sort((a, b) => b.sent - a.sent)
@@ -121,6 +113,13 @@ export function habits(txns, people) {
   spend.forEach(t => { const k = brandKey(t.who); const s = months.get(k) || { set: new Set(), v: 0, who: t.who }; s.set.add(t.date.slice(0, 7)); s.v += t.withdrawn; months.set(k, s) })
   const recurring = [...months.values()].filter(m => m.set.size >= 3).sort((a, b) => b.v - a.v).slice(0, 4)
   if (recurring.length) out.push({ icon: '🔁', title: `${recurring.length} regular payees`, body: recurring.map(m => `${titleCase(brandKey(m.who))} (${m.set.size} months)`).join(' · ') })
+
+  // fees last — useful, rarely the headline
+  const fees = txns.filter(t => t.isCharge)
+  if (fees.length) {
+    const feeTotal = sum(fees, t => t.withdrawn)
+    out.push({ icon: '💸', title: `KES ${fmt0(feeTotal)} in charges`, body: `${((feeTotal / Math.max(1, sum(txns, t => t.withdrawn))) * 100).toFixed(1)}% of all outflow across ${fees.length} fees. Details in the charges section at the bottom.` })
+  }
 
   return out
 }
@@ -247,7 +246,7 @@ export function chargesReport(txns) {
   // who cost the most in send-money fees
   const pm = new Map()
   for (const t of txns) if (P2P_SEND(t) && t.fee > 0) { const p = pm.get(t.key) || { key: t.key, name: t.who, phone: t.phone, fees: 0, n: 0, sent: 0 }; p.fees += t.fee; p.n++; p.sent += t.withdrawn; pm.set(t.key, p) }
-  const topPeople = [...pm.values()].sort((a, b) => b.fees - a.fees).slice(0, 5)
+  const topPeople = [...pm.values()].sort((a, b) => b.sent - a.sent).slice(0, 5)
 
   const sendsAll = txns.filter(P2P_SEND)
   const free = sendsAll.filter(t => !t.fee).length
