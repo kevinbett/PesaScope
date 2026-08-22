@@ -15,10 +15,12 @@ export function isPasswordError(e) {
  * Parse an M-Pesa statement PDF.
  * @param {ArrayBuffer} buf  the PDF bytes
  * @param {string} [password]
+ * @param {(page:number, pages:number, phase?:string)=>void} [onProgress]
  * @returns {Promise<{meta: object, summary: object, txns: object[]}>}
  */
-export async function parsePdf(buf, password) {
+export async function parsePdf(buf, password, onProgress) {
   const doc = await pdfjsLib.getDocument({ data: buf.slice(0), password: password || undefined }).promise
-  const lines = await extractLines(doc)
+  const lines = await extractLines(doc, onProgress)
+  if (onProgress) onProgress(doc.numPages, doc.numPages, 'parsing')
   return parseStatement(lines)
 }

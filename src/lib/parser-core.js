@@ -124,9 +124,13 @@ export const categorize = details => enrich(details).cat
 export const counterparty = details => enrich(details).who
 
 // ---------- text extraction (pdf.js document → positioned lines) ----------
-export async function extractLines(doc) {
+/** give the UI a turn without setTimeout (throttled to ~1s in background tabs) */
+const yieldToUI = () => (typeof scheduler !== 'undefined' && scheduler.yield) ? scheduler.yield() : new Promise(r => { const ch = new MessageChannel(); ch.port1.onmessage = () => r(); ch.port2.postMessage(0) })
+
+export async function extractLines(doc, onProgress) {
   const lines = []
   for (let p = 1; p <= doc.numPages; p++) {
+    if (onProgress) { onProgress(p, doc.numPages); if (p % 5 === 0) await yieldToUI() }
     const page = await doc.getPage(p)
     const tc = await page.getTextContent()
     const rows = []
