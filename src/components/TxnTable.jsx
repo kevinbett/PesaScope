@@ -124,8 +124,8 @@ export default function TxnTable({ txns, cat, setCat, title, onPick, meta, conte
                     onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(t) } }}
                   >
                     <td className="chev-col"><span className={'chev' + (open && !closing ? ' down' : '')} aria-hidden="true">▸</span></td>
-                    <td className="mono">{t.date}<span className="tsub">{t.time.slice(0, 5)}</span></td>
-                    <td><span className="catpill">{t.type}</span>{t.fuliza && t.cat !== 'Fuliza' ? <span className="catpill fz">Fuliza</span> : null}</td>
+                    <td className="mono when"><span className="d">{t.date}</span><span className="tsub">{t.time.slice(0, 5)}</span></td>
+                    <td className="typ"><span className="catpill">{t.type}</span>{t.fuliza && t.cat !== 'Fuliza' ? <span className="catpill fz">Fuliza</span> : null}{(t.phone || t.code) && <span className="m-code mono">{t.phone || t.code}</span>}</td>
                     <td className="who">{t.isCharge && t.parentWho ? <span className="muted">fee · {titleCase(t.parentWho)}</span> : titleCase(t.who)}{t.phone ? <span className="tsub mono">{t.phone}</span> : t.code ? <span className="tsub mono">{t.code}{t.account ? ' · ' + t.account : ''}</span> : null}</td>
                     <td className="details" title={t.details + ' · ' + t.receipt}>{t.details.length > 64 ? t.details.slice(0, 63) + '…' : t.details}</td>
                     <td className="amt in">{t.paidIn ? fmt(t.paidIn) : ''}</td>
