@@ -563,3 +563,5 @@ tr.detail-row td { padding-top: 0; padding-bottom: 0; }
 .nomatch .muted, .months .muted { color: inherit; opacity: .6; font-style: normal; font-size: 11px; margin-left: 3px; }
 :root:not([data-theme="light"]) .nomatch { background: #3B2F12; color: #F6DFA5; border-color: #7A5A14; }
 :root[data-theme="dark"] .nomatch { background: #3B2F12; color: #F6DFA5; border-color: #7A5A14; }
+/* one clear button, ours — hide the browser's built-in search-field ✕ */
+.searchbar input[type="search"]::-webkit-search-cancel-button, .searchbar input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
