@@ -412,3 +412,32 @@ th { position: sticky; top: 0; z-index: 2; border-bottom: none; box-shadow: inse
   .doc > svg { width: 72px; height: 88px; }
   .steps { grid-template-columns: 1fr; gap: 8px; }
 }
+/* ---------- expandable transaction rows ---------- */
+tr.txn-row { cursor: pointer; }
+tr.txn-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+tr.txn-row .chev { color: var(--ink-3); font-size: 11px; transition: transform .15s, color .15s; display: inline-block; }
+tr.txn-row:hover .chev, tr.txn-row.open .chev { color: var(--accent); }
+tr.txn-row.open td { background: var(--accent-soft); border-bottom-color: transparent; }
+th.chev-col, td.chev-col { width: 22px; padding-left: 10px; padding-right: 0; text-align: center; }
+tr.detail-row td { padding: 0 0 14px; background: var(--accent-soft); white-space: normal; }
+.detail { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px 24px; padding: 6px 16px 0 40px; }
+.detail-main { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.detail-amount { display: flex; flex-direction: column; }
+.detail-amount .big { font-family: "Archivo", sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.01em; }
+.detail-amount .big.in { color: var(--accent); }
+.detail-amount .sub { font-size: 12px; color: var(--ink-3); }
+.detail-text { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.5; word-break: break-word; }
+.facts { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 14px; }
+.facts div { min-width: 0; }
+.facts dt, .linked dt { font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.facts dd { margin: 1px 0 0; font-size: 13px; word-break: break-all; }
+.facts .mono, .linked .mono { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.mini { border: none; background: var(--card); color: var(--accent); font: inherit; font-size: 11px; padding: 1px 7px; border-radius: 999px; cursor: pointer; margin-left: 4px; border: 1px solid var(--line); }
+.mini:hover { border-color: var(--accent); }
+.linked { grid-column: 1 / -1; }
+.linked ul { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; }
+.linked .in { color: var(--accent); }
+.detail-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 780px) {
+  .detail { grid-template-columns: 1fr; padding-left: 12px; padding-right: 12px; }
+}

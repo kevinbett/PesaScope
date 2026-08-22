@@ -119,7 +119,7 @@ export default function Dashboard({ data, isSample }) {
       )}
 
       {result ? (
-        <SearchResults q={q} result={result} cat={cat} setCat={setCat} setQ={setQ} showTip={showTip} hideTip={hideTip} />
+        <SearchResults q={q} result={result} cat={cat} setCat={setCat} setQ={setQ} showTip={showTip} hideTip={hideTip} onPick={pick} />
       ) : (
         <>
           <Tiles txns={txns} people={people} onCharges={goCharges} />
@@ -141,7 +141,7 @@ export default function Dashboard({ data, isSample }) {
           </div>
 
           <Section id="transactions" title="Transactions" innerRef={txnsRef}>
-            <TxnTable txns={txns} cat={cat} setCat={setCat} />
+            <TxnTable txns={txns} cat={cat} setCat={setCat} onPick={pick} />
           </Section>
 
           <div className="charts" id="people">
