@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { Fragment, useMemo, useRef, useState } from 'react'
 import { fmt } from '../lib/format.js'
 import { titleCase, toCsv } from '../lib/insights.js'
 import { saveTextFile } from '../lib/download.js'
@@ -6,13 +6,30 @@ import Paginator, { pageSlice } from './Paginator.jsx'
 
 const CAT_ORDER = ['Send money', 'Received', 'Buy Goods (Till)', 'PayBill', 'Bank & cards', 'Savings & investments', 'Loans', 'Fuliza', 'Insurance', 'Betting', 'Airtime & bundles', 'Cash out', 'Cash in', 'Charges & fees', 'Refunds & reversals', 'Other']
 
-export default function TxnTable({ txns, cat, setCat, title }) {
+export default function TxnTable({ txns, cat, setCat, title, onPick }) {
+  const [openKey, setOpenKey] = useState(null)
+  const [copied, setCopied] = useState('')
   const [sort, setSort] = useState('date')
   const [dir, setDir] = useState('all')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
   const scrollerRef = useRef(null)
-  const goPage = p => { setPage(p); scrollerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }
+  const goPage = p => { setPage(p); setOpenKey(null); scrollerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }
+
+  const byReceipt = useMemo(() => {
+    const m = new Map()
+    for (const t of txns) { const l = m.get(t.receipt) || []; l.push(t); m.set(t.receipt, l) }
+    return m
+  }, [txns])
+  const rowKey = t => t.receipt + '|' + t.time + '|' + t.details
+  const shortName = t => { const n = titleCase(t.who); return (t.cat === 'Send money' || t.cat === 'Received') && !t.type.includes('International') ? n.split(' ')[0] : (n.length > 22 ? n.slice(0, 21) + '…' : n) }
+  const toggle = t => {
+    const k = rowKey(t)
+    const opening = openKey !== k
+    setOpenKey(opening ? k : null)
+    if (opening) setTimeout(() => document.querySelector('tr.detail-row')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 30)
+  }
+  const copy = async (text, label) => { try { await navigator.clipboard.writeText(text); setCopied(label); setTimeout(() => setCopied(''), 1400) } catch {} }
 
   const cats = useMemo(() => {
     const present = new Set(txns.map(t => t.cat))
@@ -56,24 +73,78 @@ export default function TxnTable({ txns, cat, setCat, title }) {
       <div className="table-scroller" ref={scrollerRef}>
         <table aria-label={title || 'Transactions'}>
           <thead>
-            <tr><th>Date</th><th>Type</th><th>Who / what</th><th>Details</th><th className="amt">In</th><th className="amt">Out</th><th className="amt">Fee</th></tr>
+            <tr><th className="chev-col" aria-label="Expand"></th><th>Date</th><th>Type</th><th>Who / what</th><th>Details</th><th className="amt">In</th><th className="amt">Out</th><th className="amt">Fee</th></tr>
           </thead>
           <tbody>
-            {shown.map((t, i) => (
-              <tr key={t.receipt + i} className={t.isCharge ? 'charge-row' : undefined}>
-                <td className="mono">{t.date}<span className="tsub">{t.time.slice(0, 5)}</span></td>
-                <td><span className="catpill">{t.type}</span>{t.fuliza && t.cat !== 'Fuliza' ? <span className="catpill fz">Fuliza</span> : null}</td>
-                <td className="who">{t.isCharge && t.parentWho ? <span className="muted">fee · {titleCase(t.parentWho)}</span> : titleCase(t.who)}{t.phone ? <span className="tsub mono">{t.phone}</span> : t.code ? <span className="tsub mono">{t.code}{t.account ? ' · ' + t.account : ''}</span> : null}</td>
-                <td className="details" title={t.details + ' · ' + t.receipt}>{t.details.length > 64 ? t.details.slice(0, 63) + '…' : t.details}</td>
-                <td className="amt in">{t.paidIn ? fmt(t.paidIn) : ''}</td>
-                <td className="amt">{t.withdrawn ? fmt(t.withdrawn) : ''}</td>
-                <td className="amt fee">{t.fee ? fmt(t.fee) : ''}</td>
-              </tr>
-            ))}
+            {shown.map((t, i) => {
+              const open = openKey === rowKey(t)
+              const linked = (byReceipt.get(t.receipt) || []).filter(x => x !== t)
+              return (
+                <Fragment key={t.receipt + i}>
+                  <tr
+                    className={'txn-row' + (t.isCharge ? ' charge-row' : '') + (open ? ' open' : '')}
+                    onClick={() => toggle(t)}
+                    tabIndex={0}
+                    aria-expanded={open}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(t) } }}
+                  >
+                    <td className="chev-col"><span className="chev" aria-hidden="true">{open ? '▾' : '▸'}</span></td>
+                    <td className="mono">{t.date}<span className="tsub">{t.time.slice(0, 5)}</span></td>
+                    <td><span className="catpill">{t.type}</span>{t.fuliza && t.cat !== 'Fuliza' ? <span className="catpill fz">Fuliza</span> : null}</td>
+                    <td className="who">{t.isCharge && t.parentWho ? <span className="muted">fee · {titleCase(t.parentWho)}</span> : titleCase(t.who)}{t.phone ? <span className="tsub mono">{t.phone}</span> : t.code ? <span className="tsub mono">{t.code}{t.account ? ' · ' + t.account : ''}</span> : null}</td>
+                    <td className="details" title={t.details + ' · ' + t.receipt}>{t.details.length > 64 ? t.details.slice(0, 63) + '…' : t.details}</td>
+                    <td className="amt in">{t.paidIn ? fmt(t.paidIn) : ''}</td>
+                    <td className="amt">{t.withdrawn ? fmt(t.withdrawn) : ''}</td>
+                    <td className="amt fee">{t.fee ? fmt(t.fee) : ''}</td>
+                  </tr>
+                  {open && (
+                    <tr className="detail-row">
+                      <td colSpan="8">
+                        <div className="detail">
+                          <div className="detail-main">
+                            <div className="detail-amount">
+                              <span className={'big ' + (t.paidIn ? 'in' : '')}>{t.paidIn ? '+' : '−'} KES {fmt(t.paidIn || t.withdrawn)}</span>
+                              <span className="sub">{t.type} · {t.cat}{t.fuliza ? ' · funded by Fuliza' : ''}{t.pochi ? ' · Pochi la Biashara' : ''}</span>
+                            </div>
+                            <p className="detail-text">{t.details}</p>
+                          </div>
+                          <dl className="facts">
+                            <div><dt>When</dt><dd className="mono">{t.date} {t.time}</dd></div>
+                            <div><dt>Receipt</dt><dd className="mono">{t.receipt} <button className="mini" onClick={e => { e.stopPropagation(); copy(t.receipt, t.receipt) }}>{copied === t.receipt ? 'copied ✓' : 'copy'}</button></dd></div>
+                            {t.who && !t.isCharge && <div><dt>{t.cat === 'Send money' || t.cat === 'Received' ? 'Person' : 'Payee'}</dt><dd>{titleCase(t.who)}</dd></div>}
+                            {t.phone && <div><dt>Phone</dt><dd className="mono">{t.phone}</dd></div>}
+                            {t.code && <div><dt>{t.cat === 'PayBill' || t.cat === 'Bank & cards' || t.cat === 'Insurance' || t.cat === 'Loans' ? 'PayBill' : t.cat === 'Buy Goods (Till)' ? 'Till' : 'Code'}</dt><dd className="mono">{t.code}</dd></div>}
+                            {t.account && <div><dt>Account</dt><dd className="mono">{t.account}</dd></div>}
+                            {t.fee > 0 && <div><dt>Fee</dt><dd>KES {fmt(t.fee)}{t.withdrawn ? ` (${((t.fee / t.withdrawn) * 100).toFixed(1)}%)` : ''}</dd></div>}
+                            {t.isCharge && t.parentWho && <div><dt>Charged for</dt><dd>{titleCase(t.parentWho)}</dd></div>}
+                            {t.balance != null && <div><dt>Balance after</dt><dd className="mono">KES {fmt(t.balance)}</dd></div>}
+                          </dl>
+                          {linked.length > 0 && (
+                            <div className="linked">
+                              <dt>Same receipt</dt>
+                              <ul>
+                                {linked.map((x, j) => (
+                                  <li key={j}><span className="catpill">{x.type}</span> {x.isCharge ? 'M-PESA charge' : titleCase(x.who)} <span className={'mono ' + (x.paidIn ? 'in' : '')}>{x.paidIn ? '+' : '−'}{fmt(x.paidIn || x.withdrawn)}</span></li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          <div className="detail-actions">
+                            {onPick && !t.isCharge && (t.phone || t.who) && <button className="btn small" onClick={e => { e.stopPropagation(); onPick({ phone: t.phone, name: t.who, key: t.key }) }}>All transactions with {shortName(t)}</button>}
+                            {onPick && t.isCharge && t.parentWho && <button className="btn small" onClick={e => { e.stopPropagation(); onPick({ phone: '', name: t.parentWho, key: t.parentKey }) }}>All with {titleCase(t.parentWho).split(' ')[0]}</button>}
+                            <button className="btn small" onClick={e => { e.stopPropagation(); copy(`${t.date} ${t.time} · ${t.receipt} · ${t.details} · ${t.paidIn ? '+' : '-'}KES ${fmt(t.paidIn || t.withdrawn)}`, 'row') }}>{copied === 'row' ? 'Copied ✓' : 'Copy details'}</button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              )
+            })}
           </tbody>
           {rows.length > 0 && (
             <tfoot>
-              <tr><td colSpan="4">{rows.length} row{rows.length === 1 ? '' : 's'}</td><td className="amt in">{fmt(totIn)}</td><td className="amt">{fmt(totOut)}</td><td className="amt fee">{fmt(rows.reduce((s, t) => s + (t.fee || 0), 0))}</td></tr>
+              <tr><td colSpan="5">{rows.length} row{rows.length === 1 ? '' : 's'}</td><td className="amt in">{fmt(totIn)}</td><td className="amt">{fmt(totOut)}</td><td className="amt fee">{fmt(rows.reduce((s, t) => s + (t.fee || 0), 0))}</td></tr>
             </tfoot>
           )}
         </table>
