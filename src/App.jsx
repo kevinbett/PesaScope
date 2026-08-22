@@ -44,7 +44,7 @@ export default function App() {
         <Loader key={resetTick} onParsed={onParsed} loaded={!!data} isSample={isSample} />
 
         <div ref={dashRef}>
-          {data && <Dashboard key={resetTick + ':' + isSample + ':' + data.txns.length} data={data} isSample={isSample} onLoadOwn={() => document.getElementById('loader')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />}
+          {data && <Dashboard key={resetTick + ':' + isSample + ':' + data.txns.length} data={data} isSample={isSample} onLoadOwn={() => { document.getElementById('loader')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); document.getElementById('fileInput')?.click() }} />}
         </div>
 
         <footer>
