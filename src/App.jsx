@@ -5,7 +5,16 @@ import Dashboard from './components/Dashboard.jsx'
 export default function App() {
   const [data, setData] = useState(null)      // { meta, txns }
   const [isSample, setIsSample] = useState(false)
+  const [resetTick, setResetTick] = useState(0)
   const dashRef = useRef(null)
+
+  // the wordmark is the home button: drop the statement, reset every panel, back to top
+  const goHome = () => {
+    setData(null)
+    setIsSample(false)
+    setResetTick(t => t + 1)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const onParsed = (parsed, sample) => {
     setData(parsed)
@@ -21,17 +30,19 @@ export default function App() {
       <div className="flag-ribbon" aria-hidden="true" />
       <div className="wrap">
         <header>
-          <h1>Pesa<span className="scope">Scope</span></h1>
+          <button className="homelink" onClick={goHome} title="Back to start" aria-label="PesaScope — back to start">
+            <h1>Pesa<span className="scope">Scope</span></h1>
+          </button>
           <div className="kanga" aria-hidden="true" />
           <p className="tagline">
             Your M-Pesa statement, decoded — <em>fedha zako, picha kamili</em>. Parsed entirely in your browser.
           </p>
         </header>
 
-        <Loader onParsed={onParsed} />
+        <Loader key={resetTick} onParsed={onParsed} />
 
         <div ref={dashRef}>
-          {data && <Dashboard key={isSample + ':' + data.txns.length} data={data} isSample={isSample} />}
+          {data && <Dashboard key={resetTick + ':' + isSample + ':' + data.txns.length} data={data} isSample={isSample} />}
         </div>
 
         <footer>
