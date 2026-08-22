@@ -17,21 +17,21 @@ export default function SearchResults({ q, result, cat, setCat, setQ, showTip, h
     <div className="search-results">
       <div className="dash-head">
         <span className="who">{r.terms.length > 1 ? 'Results for ' + r.terms.length + ' terms' : 'Results for “' + r.terms[0].term + '”'}</span>
-        <span className="meta">{r.rows.length} transaction{r.rows.length === 1 ? '' : 's'} · exact match</span>
+        <span className="meta">{r.rows.length} transaction{r.rows.length === 1 ? '' : 's'}{r.terms.length === 1 && r.terms[0].count ? ' · ' + r.terms[0].how : ''}</span>
         <button className="btn link" onClick={() => setQ('')}>✕ Clear search</button>
       </div>
       {r.terms.length > 1 && (
         <div className="months">
           {r.terms.map(x => (
             <button key={x.term} className="mchip" aria-pressed={x.count > 0} title="Remove this term" onClick={() => setQ(splitTerms(q).filter(t => t !== x.term).join(', '))}>
-              {titleCase(x.term)} <span className="muted">{x.count ? x.count : 'no match'}</span> ✕
+              {titleCase(x.term)} <span className="muted">{x.count ? x.count + (x.tier < 3 ? ' · ' + x.how : '') : 'no match'}</span> ✕
             </button>
           ))}
         </div>
       )}
       {r.suggestions.filter(sg => sg.options.length || true).map(sg => (
         <div className="nomatch" key={sg.term}>
-          <span>No exact match for <strong>“{sg.term}”</strong>{sg.options.length ? ' — did you mean:' : '. Try the full name as it appears on the statement, a phone number, a till / PayBill number, or a receipt.'}</span>
+          <span>No match for <strong>“{sg.term}”</strong>{sg.options.length ? ' — did you mean:' : '. Try the full name as it appears on the statement, a phone number, a till / PayBill number, or a receipt.'}</span>
           {sg.options.map(o => (
             <button key={o.value} className="mchip" onClick={() => setQ(splitTerms(q).map(t => (t === sg.term ? o.value : t)).join(', '))}>
               {/^\d/.test(o.value) ? o.value : titleCase(o.value)} <span className="muted">{o.n}</span>

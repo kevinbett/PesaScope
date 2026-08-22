@@ -133,43 +133,60 @@ const phoneKey = s => digitsOf(s).replace(/^(?:254|0)/, '')
 export const splitTerms = q => q.split(',').map(t => t.trim()).filter(t => norm(t))
 
 /**
- * Exact-match search, OR'd across comma-separated terms.
- * A term matches a row when it equals the counterparty name (or brand),
- * phone, till/PayBill code, account, or receipt — never a substring.
+ * Relevance search, OR'd across comma-separated terms. For each term the most
+ * precise tier that has results wins:
+ *   3 exact  — letters/digits equal the name, phone, till/PayBill, account or receipt
+ *   2 word   — the term is a whole word of the counterparty's name
+ *   1 partial — the term appears inside the name, number, code or details
  */
+const words = s => (s || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)
+/** small Levenshtein for typo suggestions (names are short) */
+function editDistance(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 3
+  const prev = Array.from({ length: b.length + 1 }, (_, i) => i)
+  for (let i = 1; i <= a.length; i++) {
+    let diag = prev[0]; prev[0] = i
+    for (let j = 1; j <= b.length; j++) { const tmp = prev[j]; prev[j] = Math.min(prev[j] + 1, prev[j - 1] + 1, diag + (a[i - 1] === b[j - 1] ? 0 : 1)); diag = tmp }
+  }
+  return prev[b.length]
+}
 export function search(txns, q) {
   const terms = splitTerms(q)
   if (!terms.length) return null
-  const matchTerm = (t, rawTerm) => {
+  const tierOf = (t, rawTerm) => {
     const term = norm(rawTerm)
-    if (!term) return false
-    if (norm(t.who) === term || norm(brandKey(t.who)) === term) return true
-    if (t.isCharge && t.parentWho && norm(t.parentWho) === term) return true
-    if (t.phone && phoneKey(t.phone).length >= 6 && phoneKey(t.phone) === phoneKey(rawTerm)) return true
-    if (t.code && norm(t.code) === term) return true
-    if (t.account && norm(t.account) === term) return true
-    if (norm(t.receipt) === term) return true
-    return false
+    if (!term) return 0
+    const who = t.isCharge && t.parentWho ? t.parentWho : t.who
+    if (norm(who) === term || norm(brandKey(who)) === term) return 3
+    if (t.phone && phoneKey(t.phone).length >= 6 && phoneKey(t.phone) === phoneKey(rawTerm)) return 3
+    if (t.code && norm(t.code) === term) return 3
+    if (t.account && norm(t.account) === term) return 3
+    if (norm(t.receipt) === term) return 3
+    if (words(who).includes(term)) return 2
+    const hay = norm(who + ' ' + t.phone + ' ' + t.code + ' ' + t.account + ' ' + t.receipt + ' ' + t.details)
+    if (term.length >= 3 && hay.includes(term)) return 1
+    return 0
   }
+  // best available tier per term, then the rows at that tier
+  const tiers = terms.map(term => Math.max(0, ...txns.map(t => tierOf(t, term))))
   const counts = terms.map(() => 0)
   const rows = txns.filter(t => {
     let hit = false
-    terms.forEach((term, i) => { if (matchTerm(t, term)) { counts[i]++; hit = true } })
+    terms.forEach((term, i) => { if (tiers[i] && tierOf(t, term) === tiers[i]) { counts[i]++; hit = true } })
     return hit
   })
-  const termInfo = terms.map((term, i) => ({ term, count: counts[i] }))
-  // for terms that matched nothing, offer the closest real names / codes
+  const TIER_LABEL = { 3: 'exact', 2: 'name contains the word', 1: 'partial match', 0: 'no match' }
+  const termInfo = terms.map((term, i) => ({ term, count: counts[i], tier: tiers[i], how: TIER_LABEL[tiers[i]] }))
+  // for terms that matched nothing at any tier, offer the closest names / numbers
   const unmatched = termInfo.filter(x => !x.count)
   const suggestions = unmatched.map(({ term }) => {
-    const seen = new Map()
+    const seen = new Map(); const nt = norm(term)
     for (const t of txns) {
-      const cands = [t.who, t.phone, t.code].filter(Boolean)
-      for (const c of cands) {
-        const n = norm(c), nt = norm(term)
-        if (nt.length >= 3 && (n.includes(nt) || (digitsOf(term).length >= 4 && digitsOf(c).includes(digitsOf(term))))) {
-          const k = t.phone && n === norm(t.phone) ? t.phone : c
-          seen.set(k, (seen.get(k) || 0) + 1)
-        }
+      for (const c of [t.who, t.phone, t.code].filter(Boolean)) {
+        const n = norm(c)
+        // loose: shares a 3+ letter prefix with any word, or digits overlap
+        const close = nt.length >= 3 && (words(c).some(w => (w.startsWith(nt.slice(0, 3)) && (w.includes(nt.slice(0, 4)) || nt.includes(w.slice(0, 4)))) || (nt.length >= 4 && editDistance(w, nt) <= (nt.length >= 5 ? 2 : 1))) || (digitsOf(term).length >= 4 && digitsOf(c).includes(digitsOf(term))))
+        if (close) { const k = t.phone && n === norm(t.phone) ? t.phone : c; seen.set(k, (seen.get(k) || 0) + 1) }
       }
     }
     return { term, options: [...seen.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([value, n]) => ({ value, n })) }
