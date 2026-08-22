@@ -24,11 +24,20 @@ export default function SearchResults({ q, result, cat, setCat, setQ, showTip, h
   useEffect(() => { setCombine(false) }, [q])
   const parties = counterparties(r.rows)
   const ambiguous = r.terms.length === 1 && parties.length > 1 && !combine
+  // money that left you to these counterparties (fee rows folded into their parent), and what came back
+  const outRows = r.rows.filter(t => t.withdrawn > 0 && !t.isCharge)
+  const inRows = r.rows.filter(t => t.paidIn > 0)
+  const paid = outRows.reduce((s, t) => s + t.withdrawn + (t.fee || 0), 0)
+  const received = inRows.reduce((s, t) => s + t.paidIn, 0)
+  const p2pOut = outRows.filter(t => t.cat === 'Send money').length
+  const outLabel = outRows.length === 0 ? 'Paid' : p2pOut === outRows.length ? 'Sent' : p2pOut === 0 ? 'Paid' : 'Paid & sent'
+  const avg = outRows.length ? paid / outRows.length : 0
+  const net = received - paid
   const tiles = [
-    { lbl: 'You sent', v: fmt(r.sent), sub: `KES · ${r.sentN} transfer${r.sentN === 1 ? '' : 's'} to people`, cls: '' },
-    { lbl: 'You received', v: fmt(r.recv), sub: `KES · ${r.recvN} receipt${r.recvN === 1 ? '' : 's'} from people`, cls: 'pos' },
-    { lbl: 'All money out', v: fmt(r.out), sub: `KES · ${r.rows.filter(t => t.withdrawn > 0).length} rows incl. bills & fees`, cls: '' },
-    { lbl: 'All money in', v: fmt(r.inn), sub: `KES · ${r.rows.filter(t => t.paidIn > 0).length} rows`, cls: 'pos' },
+    { lbl: outLabel, v: fmt(paid), sub: `KES · ${outRows.length} payment${outRows.length === 1 ? '' : 's'}${r.fees ? ` incl. ${fmt(r.fees)} fees` : ''}`, cls: '' },
+    { lbl: 'Received', v: fmt(received), sub: `KES · ${inRows.length} receipt${inRows.length === 1 ? '' : 's'}`, cls: received ? 'pos' : '' },
+    { lbl: 'Net', v: (net >= 0 ? '+' : '−') + fmt(Math.abs(net)), sub: 'KES · received minus paid', cls: net > 0 ? 'pos' : net < 0 ? 'negv' : '' },
+    { lbl: 'Average payment', v: fmt(avg), sub: outRows.length ? `KES · largest ${fmt(Math.max(...outRows.map(t => t.withdrawn)))}` : 'KES', cls: '' },
   ]
   const catTotal = r.cats.out.reduce((s, [, v]) => s + v, 0) || 1
   return (
