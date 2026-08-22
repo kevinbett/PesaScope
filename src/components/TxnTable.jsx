@@ -1,15 +1,18 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { fmt } from '../lib/format.js'
 import { titleCase, toCsv } from '../lib/insights.js'
 import { saveTextFile } from '../lib/download.js'
+import Paginator, { pageSlice } from './Paginator.jsx'
 
-const PAGE = 100
 const CAT_ORDER = ['Send money', 'Received', 'Buy Goods (Till)', 'PayBill', 'Bank & cards', 'Savings & investments', 'Loans', 'Fuliza', 'Insurance', 'Betting', 'Airtime & bundles', 'Cash out', 'Cash in', 'Charges & fees', 'Refunds & reversals', 'Other']
 
 export default function TxnTable({ txns, cat, setCat, title }) {
   const [sort, setSort] = useState('date')
-  const [limit, setLimit] = useState(PAGE)
   const [dir, setDir] = useState('all')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+  const scrollerRef = useRef(null)
+  const goPage = p => { setPage(p); scrollerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }
 
   const cats = useMemo(() => {
     const present = new Set(txns.map(t => t.cat))
@@ -22,7 +25,7 @@ export default function TxnTable({ txns, cat, setCat, title }) {
     else r = r.slice().sort((a, b) => (b.paidIn + b.withdrawn) - (a.paidIn + a.withdrawn))
     return r
   }, [txns, cat, dir, sort])
-  const shown = rows.slice(0, limit)
+  const { rows: shown } = pageSlice(rows, page, pageSize)
   const totIn = rows.reduce((s, t) => s + t.paidIn, 0), totOut = rows.reduce((s, t) => s + t.withdrawn, 0)
 
   const download = async () => {
@@ -33,24 +36,24 @@ export default function TxnTable({ txns, cat, setCat, title }) {
   return (
     <>
       <div className="chips" role="group" aria-label="Filter by category">
-        <button className="mchip" aria-pressed={!cat} onClick={() => { setCat(''); setLimit(PAGE) }}>All</button>
+        <button className="mchip" aria-pressed={!cat} onClick={() => { setCat(''); setPage(1) }}>All</button>
         {cats.map(c => (
-          <button key={c} className="mchip" aria-pressed={cat === c} onClick={() => { setCat(cat === c ? '' : c); setLimit(PAGE) }}>{c}</button>
+          <button key={c} className="mchip" aria-pressed={cat === c} onClick={() => { setCat(cat === c ? '' : c); setPage(1) }}>{c}</button>
         ))}
       </div>
       <div className="tbl-controls">
         <div className="seg" role="group" aria-label="Direction">
           {[['all', 'In & out'], ['in', 'Money in'], ['out', 'Money out']].map(([v, l]) => (
-            <button key={v} aria-pressed={dir === v} onClick={() => { setDir(v); setLimit(PAGE) }}>{l}</button>
+            <button key={v} aria-pressed={dir === v} onClick={() => { setDir(v); setPage(1) }}>{l}</button>
           ))}
         </div>
         <div className="seg" role="group" aria-label="Sort">
-          <button aria-pressed={sort === 'date'} onClick={() => setSort('date')}>Newest</button>
-          <button aria-pressed={sort === 'amount'} onClick={() => setSort('amount')}>Largest</button>
+          <button aria-pressed={sort === 'date'} onClick={() => { setSort('date'); setPage(1) }}>Newest</button>
+          <button aria-pressed={sort === 'amount'} onClick={() => { setSort('amount'); setPage(1) }}>Largest</button>
         </div>
         <button className="btn small" onClick={download} disabled={!rows.length}>⤓ CSV ({rows.length})</button>
       </div>
-      <div className="table-scroller">
+      <div className="table-scroller" ref={scrollerRef}>
         <table aria-label={title || 'Transactions'}>
           <thead>
             <tr><th>Date</th><th>Type</th><th>Who / what</th><th>Details</th><th className="amt">In</th><th className="amt">Out</th><th className="amt">Fee</th></tr>
@@ -75,12 +78,7 @@ export default function TxnTable({ txns, cat, setCat, title }) {
           )}
         </table>
       </div>
-      {rows.length > limit && (
-        <div className="more-row">
-          <button className="btn" onClick={() => setLimit(l => l + PAGE)}>Show {Math.min(PAGE, rows.length - limit)} more</button>
-          <span className="more-note">Showing {limit} of {rows.length}</span>
-        </div>
-      )}
+      <Paginator total={rows.length} page={page} setPage={goPage} pageSize={pageSize} setPageSize={setPageSize} sizes={[25, 50, 100, 250]} noun="rows" />
       {!rows.length && <p className="more-note">No transactions match.</p>}
     </>
   )

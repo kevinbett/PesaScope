@@ -60,9 +60,9 @@ export default function Dashboard({ data, isSample }) {
     [data, monthKey]
   )
   const people = useMemo(() => buildPeople(txns), [txns])
-  const sentTo = useMemo(() => topSentTo(people, 10), [people])
-  const recvFrom = useMemo(() => topReceivedFrom(people, 10), [people])
-  const merchants = useMemo(() => topMerchants(txns, 12), [txns])
+  const sentTo = useMemo(() => topSentTo(people, Infinity), [people])
+  const recvFrom = useMemo(() => topReceivedFrom(people, Infinity), [people])
+  const merchants = useMemo(() => topMerchants(txns, Infinity), [txns])
   const cats = useMemo(() => categoryTotals(txns), [txns])
   const habitItems = useMemo(() => habits(txns, people), [txns, people])
   const result = useMemo(() => search(txns, q), [txns, q])
