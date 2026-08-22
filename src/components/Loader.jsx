@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { parsePdf, isPasswordError } from '../lib/parser.js'
 import { makeSample } from '../lib/sample.js'
 
-export default function Loader({ onParsed }) {
+export default function Loader({ onParsed, loaded = false, isSample = false }) {
   const clearShown = () => onParsed(null, false)
   const [armed, setArmed] = useState(false)
   const [needPw, setNeedPw] = useState(false)
@@ -98,7 +98,7 @@ export default function Loader({ onParsed }) {
               <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 11V3m0 0L4.5 6.5M8 3l3.5 3.5M3 13h10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
               Choose PDF
             </button>
-            <div className="dz-hint">PDF · the “M-PESA Full Statement” Safaricom emails you</div>
+            <div className="dz-hint">{loaded ? (isSample ? 'Drop your own statement to replace the sample' : 'Drop another statement to replace the one loaded') : 'PDF · the “M-PESA Full Statement” Safaricom emails you'}</div>
           </div>
         )}
         {busy && <div className="dz-progress" aria-hidden="true"><span /></div>}
@@ -110,23 +110,25 @@ export default function Loader({ onParsed }) {
       />
       <div id="status" role="status" className={status.err ? 'err' : ''}>{status.msg}</div>
 
-      <ol className="steps" aria-label="How to get your statement">
+      {!loaded && <ol className="steps" aria-label="How to get your statement">
         <li><span className="n">1</span><span><strong>Request it</strong><br />M-PESA app → Statements → pick the months. Safaricom emails the PDF and texts you a PIN.</span></li>
         <li><span className="n">2</span><span><strong>Drop it above</strong><br />or tap Choose PDF and pick the file from Downloads or Mail.</span></li>
         <li><span className="n">3</span><span><strong>Enter the PIN</strong><br />from the SMS. The PDF is unlocked on this device — never uploaded.</span></li>
-      </ol>
+      </ol>}
 
       <div className="privacy">
         <svg className="shield" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l5 2v4c0 3.2-2.1 5.6-5 7-2.9-1.4-5-3.8-5-7v-4l5-2z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/><path d="M5.6 8l1.7 1.7L10.5 6.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
         <span>
-          Decrypted and read on this device only — nothing is uploaded, nothing persists after you close the tab.{' '}
-          <button
-            className="btn link"
-            onClick={() => {
-              setStatus({ msg: 'Showing a sample statement — drop your own PDF any time.', err: false })
-              onParsed(makeSample(), true)
-            }}
-          >Explore with a sample statement instead</button>
+          Decrypted and read on this device only — nothing is uploaded, nothing persists after you close the tab.
+          {!loaded && <>{' '}
+            <button
+              className="btn link"
+              onClick={() => {
+                setStatus({ msg: 'Showing a sample statement — drop your own PDF any time.', err: false })
+                onParsed(makeSample(), true)
+              }}
+            >Explore with a sample statement instead</button>
+          </>}
         </span>
       </div>
     </section>
