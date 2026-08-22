@@ -124,7 +124,7 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
       )}
 
       {result ? (
-        <SearchResults q={q} result={result} cat={cat} setCat={setCat} setQ={setQ} showTip={showTip} hideTip={hideTip} onPick={pick} meta={data.meta} />
+        <SearchResults q={q} result={result} cat={cat} setCat={setCat} setQ={setQ} showTip={showTip} hideTip={hideTip} onPick={pick} meta={data.meta} context={monthKey === 'all' ? '' : monthLbl(monthKey)} />
       ) : (
         <>
           <Tiles txns={txns} people={people} onCharges={goCharges} />
@@ -146,7 +146,7 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
           </div>
 
           <Section id="transactions" title="Transactions" innerRef={txnsRef}>
-            <TxnTable txns={txns} cat={cat} setCat={setCat} onPick={pick} meta={data.meta} />
+            <TxnTable txns={txns} cat={cat} setCat={setCat} onPick={pick} meta={data.meta} context={monthKey === 'all' ? '' : monthLbl(monthKey)} />
           </Section>
 
           <div className="charts" id="people">

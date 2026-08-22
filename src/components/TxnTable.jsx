@@ -4,10 +4,11 @@ import { titleCase, toCsv } from '../lib/insights.js'
 import { saveTextFile } from '../lib/download.js'
 import Paginator, { pageSlice } from './Paginator.jsx'
 import { printReceipt } from '../lib/receipt.js'
+import { printList } from '../lib/printlist.js'
 
 const CAT_ORDER = ['Send money', 'Received', 'Buy Goods (Till)', 'PayBill', 'Bank & cards', 'Savings & investments', 'Loans', 'Fuliza', 'Insurance', 'Betting', 'Airtime & bundles', 'Cash out', 'Cash in', 'Charges & fees', 'Refunds & reversals', 'Other']
 
-export default function TxnTable({ txns, cat, setCat, title, onPick, meta }) {
+export default function TxnTable({ txns, cat, setCat, title, onPick, meta, context }) {
   const [openKey, setOpenKey] = useState(null)
   const [copied, setCopied] = useState('')
   const [sort, setSort] = useState('date')
@@ -76,6 +77,13 @@ export default function TxnTable({ txns, cat, setCat, title, onPick, meta }) {
           <button aria-pressed={sort === 'amount'} onClick={() => { setSort('amount'); setPage(1) }}>Largest</button>
         </div>
         <button className="btn small" onClick={download} disabled={!rows.length}>⤓ CSV ({rows.length})</button>
+        <button className="btn small" disabled={!rows.length} onClick={() => {
+          const filters = [context, cat, dir === 'in' ? 'Money in only' : dir === 'out' ? 'Money out only' : ''].filter(Boolean)
+          if (!printList(rows, { heading: title || 'All transactions', filters, meta })) alert('Your browser blocked the print window — allow pop-ups for this page and try again.')
+        }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" style={{ verticalAlign: '-2px', marginRight: 5 }}><path d="M4 6V2h8v4M4 12H2V7h12v5h-2M4 10h8v4H4z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+          Print list ({rows.length})
+        </button>
       </div>
       <div className="table-scroller" ref={scrollerRef}>
         <table aria-label={title || 'Transactions'}>
