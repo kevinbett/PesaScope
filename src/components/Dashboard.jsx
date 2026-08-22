@@ -70,7 +70,7 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
   const charges = useMemo(() => chargesReport(txns), [txns])
   const catTotal = cats.out.reduce((s, [, v]) => s + v, 0) || 1
 
-  useEffect(() => { setCat('') }, [q, monthKey])
+  useEffect(() => { setCat('') }, [q])
 
   const pick = p => { setQ(p.phone || p.name || p.key); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const pickCat = c => { setCat(c); txnsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
@@ -82,6 +82,15 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
 
   const m = data.meta
   const period = m.period || (txns.length ? txns[0].date + ' → ' + txns[txns.length - 1].date : '')
+
+  // everything currently narrowing the view, each removable on its own
+  const active = [
+    q ? { key: 'q', label: '“' + q + '”', clear: () => setQ('') } : null,
+    monthKey !== 'all' ? { key: 'm', label: monthLbl(monthKey), clear: () => setMonthKey('all') } : null,
+    cat ? { key: 'c', label: cat, clear: () => setCat('') } : null,
+  ].filter(Boolean)
+  const shownCount = result ? result.rows.filter(t => !cat || t.cat === cat).length : txns.filter(t => !cat || t.cat === cat).length
+  const clearAll = () => { setQ(''); setMonthKey('all'); setCat('') }
 
   return (
     <div id="dash" className="show">
@@ -105,7 +114,7 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
         </div>
       )}
 
-      <div className="searchbar">
+      <div className={'searchbar' + (q ? ' active' : '')}>
         <span className="sicon" aria-hidden="true">⌕</span>
         <input
           type="search" value={q} onChange={e => setQ(e.target.value)}
@@ -114,6 +123,19 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
         />
         {q && <button className="sclear" onClick={() => setQ('')} aria-label="Clear search">✕</button>}
       </div>
+
+      {active.length > 0 && (
+        <div className="filterstrip" role="status" aria-live="polite">
+          <span className="fs-icon" aria-hidden="true">⚲</span>
+          <span className="fs-text">Showing <strong>{shownCount.toLocaleString()}</strong> of {data.txns.length.toLocaleString()} transactions</span>
+          <span className="fs-pills">
+            {active.map(f => (
+              <button key={f.key} className="fs-pill" onClick={f.clear} title={'Remove this filter'}>{f.label}<span aria-hidden="true"> ✕</span></button>
+            ))}
+          </span>
+          {active.length > 1 && <button className="fs-clear" onClick={clearAll}>Clear all</button>}
+        </div>
+      )}
 
       {!result && (
         <nav className="jumpbar" aria-label="Jump to section">

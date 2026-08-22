@@ -533,3 +533,25 @@ tr.detail-row td { padding-top: 0; padding-bottom: 0; }
   tfoot td { display: block; padding: 0; border: none; background: none; }
   tfoot td.amt.in::before { content: '+'; }
 }
+/* ---------- active-filter strip ---------- */
+.searchbar.active input[type="search"] { border-color: var(--accent); background: var(--accent-soft); }
+.filterstrip {
+  position: sticky; top: 8px; z-index: 15;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+  margin-top: 10px; padding: 8px 12px; border-radius: 12px;
+  background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  color: var(--ink); font-size: 13px; box-shadow: 0 8px 24px -18px rgb(0 0 0 / 0.45);
+}
+.fs-icon { color: var(--accent); font-size: 15px; }
+.fs-text strong { color: var(--accent); }
+.fs-pills { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.fs-pill {
+  border: 1px solid var(--accent); background: var(--card); color: var(--ink); border-radius: 999px;
+  padding: 2px 10px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.fs-pill span { color: var(--ink-3); }
+.fs-pill:hover { background: var(--accent); color: var(--accent-ink); }
+.fs-pill:hover span { color: inherit; }
+.fs-clear { margin-left: auto; border: none; background: none; color: var(--accent); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.sample-banner + .dash-head + .months + .searchbar + .filterstrip { top: 8px; }
+@media (max-width: 640px) { .filterstrip { font-size: 12.5px; padding: 7px 10px; } }
