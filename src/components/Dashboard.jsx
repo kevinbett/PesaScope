@@ -70,14 +70,24 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
   const result = useMemo(() => search(txns, q), [txns, q])
   // type-ahead over the whole statement (not the month slice): the fragment is the text after the last comma
   const index = useMemo(() => buildIndex(data.txns), [data])
-  const fragment = q.slice(q.lastIndexOf(',') + 1).trim()
+  const cut = q.lastIndexOf(',')
+  const committed = cut >= 0 ? q.slice(0, cut).split(',').map(t => t.trim()).filter(Boolean) : []
+  const fragment = (cut >= 0 ? q.slice(cut + 1) : q).replace(/^\s+/, '')
+  const labelFor = term => {
+    const d = term.replace(/\D/g, '').replace(/^(?:254|0)/, '')
+    const hit = d.length >= 6 ? index.find(e => e.kind === 'person' && e.value.replace(/\D/g, '').endsWith(d)) : null
+    return hit ? titleCase(hit.label) + ' · ' + hit.value : (/^\d/.test(term) ? term : titleCase(term))
+  }
+  const setParts = (terms, frag) => setQ(terms.length ? terms.join(', ') + ', ' + frag : frag)
+  const removeChip = i => setParts(committed.filter((_, j) => j !== i), fragment)
   const sugs = useMemo(() => (sugOpen ? suggest(index, fragment) : []), [index, fragment, sugOpen])
+  // a chosen suggestion becomes a committed chip, ready for the next term
   const applySuggestion = e => {
-    const head = q.includes(',') ? q.slice(0, q.lastIndexOf(',') + 1).trim() + ' ' : ''
-    setQ(head + e.value)
+    setParts([...committed, e.value], '')
     setSugOpen(false); setSugIdx(0)
   }
   const onSearchKey = ev => {
+    if (ev.key === 'Backspace' && !fragment && committed.length) { ev.preventDefault(); removeChip(committed.length - 1); return }
     if (!sugs.length) { if (ev.key === 'Escape') setSugOpen(false); return }
     if (ev.key === 'ArrowDown') { ev.preventDefault(); setSugIdx(i => (i + 1) % sugs.length) }
     else if (ev.key === 'ArrowUp') { ev.preventDefault(); setSugIdx(i => (i - 1 + sugs.length) % sugs.length) }
@@ -135,14 +145,24 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
         </div>
       )}
 
-      <div className={'searchbar' + (q ? ' active' : '')}>
+      <div className={'searchbar' + (q ? ' active' : '') + (committed.length ? ' has-tokens' : '')} onClick={e => { if (e.target === e.currentTarget || e.target.classList.contains('tokens')) e.currentTarget.querySelector('input')?.focus() }}>
         <span className="sicon" aria-hidden="true">⌕</span>
+        {committed.length > 0 && (
+          <span className="tokens">
+            {committed.map((term, i) => (
+              <span className="token" key={i + term}>
+                {labelFor(term)}
+                <button type="button" className="token-x" aria-label={'Remove ' + term} onMouseDown={e => e.preventDefault()} onClick={() => removeChip(i)}>✕</button>
+              </span>
+            ))}
+          </span>
+        )}
         <input
-          type="search" value={q} onChange={e => { setQ(e.target.value); setSugOpen(true); setSugIdx(0) }}
+          type="search" value={fragment} onChange={e => { setParts(committed, e.target.value); setSugOpen(true); setSugIdx(0) }}
           onFocus={() => { clearTimeout(blurTimer.current); setSugOpen(true) }}
           onBlur={() => { blurTimer.current = setTimeout(() => setSugOpen(false), 150) }}
           onKeyDown={onSearchKey}
-          placeholder="Search a name, phone, till, PayBill or receipt — combine with commas: faith, 0722***481"
+          placeholder={committed.length ? 'Add another…' : 'Search a name, phone, till, PayBill or receipt — a comma adds another'}
           aria-label="Search transactions" autoComplete="off"
           role="combobox" aria-expanded={sugs.length > 0} aria-controls="suggest-list" aria-autocomplete="list"
         />
