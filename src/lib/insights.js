@@ -125,22 +125,58 @@ export function habits(txns, people) {
   return out
 }
 
-/** free-text search: names, masked phones, paybill/till codes, accounts, receipts, details */
+/** normalise a term or field for exact comparison */
+const norm = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim()
+const digitsOf = s => (s || '').replace(/\D/g, '')
+export const splitTerms = q => q.split(',').map(t => norm(t)).filter(Boolean)
+
+/**
+ * Exact-match search, OR'd across comma-separated terms.
+ * A term matches a row when it equals the counterparty name (or brand),
+ * phone, till/PayBill code, account, or receipt — never a substring.
+ */
 export function search(txns, q) {
-  const needle = q.trim().toLowerCase()
-  if (!needle) return null
-  const digits = needle.replace(/\D/g, '')
-  const terms = needle.split(/\s+/).filter(Boolean)
+  const terms = splitTerms(q)
+  if (!terms.length) return null
+  const matchTerm = (t, term) => {
+    const d = digitsOf(term)
+    if (norm(t.who) === term || brandKey(t.who).toLowerCase() === term) return true
+    if (t.isCharge && t.parentWho && norm(t.parentWho) === term) return true
+    if (t.phone && d.length >= 6 && digitsOf(t.phone) === d) return true
+    if (t.phone && norm(t.phone) === term) return true
+    if (t.code && norm(t.code) === term) return true
+    if (t.account && norm(t.account) === term) return true
+    if (norm(t.receipt) === term) return true
+    return false
+  }
+  const counts = terms.map(() => 0)
   const rows = txns.filter(t => {
-    const hay = (t.who + ' ' + t.details + ' ' + t.receipt + ' ' + t.code + ' ' + t.account + ' ' + t.type + ' ' + t.cat + ' ' + (t.parentWho || '')).toLowerCase()
-    const phoneHit = digits.length >= 3 && (t.phone || '').replace(/\D/g, '').includes(digits)
-    return phoneHit || terms.every(term => hay.includes(term))
+    let hit = false
+    terms.forEach((term, i) => { if (matchTerm(t, term)) { counts[i]++; hit = true } })
+    return hit
+  })
+  const termInfo = terms.map((term, i) => ({ term, count: counts[i] }))
+  // for terms that matched nothing, offer the closest real names / codes
+  const unmatched = termInfo.filter(x => !x.count)
+  const suggestions = unmatched.map(({ term }) => {
+    const seen = new Map()
+    for (const t of txns) {
+      const cands = [t.who, t.phone, t.code].filter(Boolean)
+      for (const c of cands) {
+        const n = norm(c)
+        if (n.includes(term) || (term.length >= 4 && digitsOf(c).includes(digitsOf(term)) && digitsOf(term).length >= 4)) {
+          const k = t.phone && n === norm(t.phone) ? t.phone : c
+          seen.set(k, (seen.get(k) || 0) + 1)
+        }
+      }
+    }
+    return { term, options: [...seen.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([value, n]) => ({ value, n })) }
   })
   const sent = rows.filter(P2P_SEND), recv = rows.filter(P2P_RECV)
   const paid = rows.filter(t => t.withdrawn > 0 && !t.isCharge)
   const people = buildPeople(rows).sort((a, b) => b.total - a.total)
   return {
-    rows,
+    rows, terms: termInfo, suggestions,
     sentN: sent.length, sent: sum(sent, t => t.withdrawn),
     recvN: recv.length, recv: sum(recv, t => t.paidIn),
     paidN: paid.length, paid: sum(paid, t => t.withdrawn),
