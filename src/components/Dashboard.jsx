@@ -118,7 +118,7 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
         <span className="sicon" aria-hidden="true">⌕</span>
         <input
           type="search" value={q} onChange={e => setQ(e.target.value)}
-          placeholder="Exact name, phone, till, PayBill or receipt — several with commas: Faith Kamande, 0722***481"
+          placeholder="Search a name, phone, till, PayBill or receipt — combine with commas: faith, 0722***481"
           aria-label="Search transactions"
         />
         {q && <button className="sclear" onClick={() => setQ('')} aria-label="Clear search">✕</button>}
