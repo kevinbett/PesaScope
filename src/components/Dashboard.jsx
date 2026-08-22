@@ -133,7 +133,7 @@ export default function Dashboard({ data, isSample, onLoadOwn }) {
     <div id="dash" className="show">
       {isSample && (
         <div className="sample-banner" role="status">
-          <span><strong>Sample data</strong> — these people, merchants and amounts are made up. Nothing here is from a real statement.</span>
+          <span><strong>Sample data</strong><span className="sb-long"> — these people, merchants and amounts are made up. Nothing here is from a real statement.</span><span className="sb-short"> — not your statement</span></span>
           <button className="btn small" onClick={onLoadOwn}>Load my statement ↑</button>
         </div>
       )}
