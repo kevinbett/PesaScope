@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useRef, useState } from 'react'
-import { fmt } from '../lib/format.js'
+import { fmt, dayHeading } from '../lib/format.js'
 import { titleCase, toCsv } from '../lib/insights.js'
 import { saveTextFile } from '../lib/download.js'
 import Paginator, { pageSlice } from './Paginator.jsx'
@@ -43,6 +43,12 @@ export default function TxnTable({ txns, cat, setCat, title, onPick }) {
     return r
   }, [txns, cat, dir, sort])
   const { rows: shown } = pageSlice(rows, page, pageSize)
+  const dayTotals = useMemo(() => {
+    const m = new Map()
+    for (const t of rows) { const d = m.get(t.date) || { n: 0, inn: 0, out: 0 }; d.n++; d.inn += t.paidIn; d.out += t.withdrawn; m.set(t.date, d) }
+    return m
+  }, [rows])
+  const grouped = sort === 'date'
   const totIn = rows.reduce((s, t) => s + t.paidIn, 0), totOut = rows.reduce((s, t) => s + t.withdrawn, 0)
 
   const download = async () => {
@@ -79,8 +85,19 @@ export default function TxnTable({ txns, cat, setCat, title, onPick }) {
             {shown.map((t, i) => {
               const open = openKey === rowKey(t)
               const linked = (byReceipt.get(t.receipt) || []).filter(x => x !== t)
+              const newDay = grouped && (i === 0 || shown[i - 1].date !== t.date)
+              const dh = newDay ? dayHeading(t.date) : null
+              const dt = newDay ? dayTotals.get(t.date) : null
               return (
                 <Fragment key={t.receipt + i}>
+                  {newDay && (
+                    <tr className="day-row" aria-label={dh.long}>
+                      <td colSpan="8">
+                        <span className="day-name">{dh.rel ? <><strong>{dh.rel}</strong> · {dh.long}</> : dh.long}</span>
+                        <span className="day-meta">{dt.n} transaction{dt.n === 1 ? '' : 's'}{dt.inn ? <> · <span className="in">+{fmt(dt.inn)}</span></> : null}{dt.out ? <> · −{fmt(dt.out)}</> : null}</span>
+                      </td>
+                    </tr>
+                  )}
                   <tr
                     className={'txn-row' + (t.isCharge ? ' charge-row' : '') + (open ? ' open' : '')}
                     onClick={() => toggle(t)}

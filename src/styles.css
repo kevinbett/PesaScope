@@ -454,3 +454,16 @@ tr.detail-row td { padding: 0 0 14px; background: var(--accent-soft); white-spac
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sample-banner { background: #3B2F12; color: #F6DFA5; border-color: #7A5A14; } :root:not([data-theme="light"]) .sample-banner .btn { background: #F6DFA5; color: #3B2F12; border-color: #F6DFA5; } }
 :root[data-theme="dark"] .sample-banner { background: #3B2F12; color: #F6DFA5; border-color: #7A5A14; }
 :root[data-theme="dark"] .sample-banner .btn { background: #F6DFA5; color: #3B2F12; border-color: #F6DFA5; }
+/* ---------- day dividers in the transaction table ---------- */
+tr.day-row td {
+  position: sticky; top: 33px; z-index: 1;
+  padding: 6px 12px 5px; background: var(--ground); border-bottom: 1px solid var(--line);
+  font-size: 11.5px; color: var(--ink-2); white-space: nowrap;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+tr.day-row td::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-right: 8px; vertical-align: 1px; }
+tr.day-row .day-name { font-family: "Archivo", sans-serif; font-weight: 600; color: var(--ink); letter-spacing: 0.01em; }
+tr.day-row .day-name strong { color: var(--accent); font-weight: 700; }
+tr.day-row .day-meta { margin-left: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+tr.day-row .day-meta .in { color: var(--accent); }
+tr.day-row + tr.txn-row td { border-top: none; }
