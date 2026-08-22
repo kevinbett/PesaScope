@@ -291,6 +291,6 @@ export function linkCharges(txns) {
     // the fee belongs to the money-out row under the same receipt — a Fuliza-funded
     // send still owns its fee; only fall back to the overdraft row when nothing else exists
     const target = all.find(p => p.withdrawn > 0 && p.cat !== 'Fuliza') || all.find(p => p.withdrawn > 0) || all[0]
-    if (target) { target.fee += c.withdrawn; c.parentWho = target.who; c.parentKey = target.key }
+    if (target) { target.fee += c.withdrawn; c.parentWho = target.who; c.parentKey = target.key; c.parentPhone = target.phone || ''; c.parentCode = target.code || '' }
   }
 }

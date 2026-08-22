@@ -157,13 +157,15 @@ export function search(txns, q) {
     const term = norm(rawTerm)
     if (!term) return 0
     const who = t.isCharge && t.parentWho ? t.parentWho : t.who
+    const phone = t.isCharge ? (t.parentPhone || '') : t.phone
+    const code = t.isCharge ? (t.parentCode || '') : t.code
     if (norm(who) === term || norm(brandKey(who)) === term) return 3
-    if (t.phone && phoneKey(t.phone).length >= 6 && phoneKey(t.phone) === phoneKey(rawTerm)) return 3
-    if (t.code && norm(t.code) === term) return 3
+    if (phone && phoneKey(phone).length >= 6 && phoneKey(phone) === phoneKey(rawTerm)) return 3
+    if (code && norm(code) === term) return 3
     if (t.account && norm(t.account) === term) return 3
     if (norm(t.receipt) === term) return 3
     if (words(who).includes(term)) return 2
-    const hay = norm(who + ' ' + t.phone + ' ' + t.code + ' ' + t.account + ' ' + t.receipt + ' ' + t.details)
+    const hay = norm(who + ' ' + phone + ' ' + code + ' ' + t.account + ' ' + t.receipt + ' ' + t.details)
     if (term.length >= 3 && hay.includes(term)) return 1
     return 0
   }

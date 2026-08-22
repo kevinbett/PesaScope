@@ -565,3 +565,21 @@ tr.detail-row td { padding-top: 0; padding-bottom: 0; }
 :root[data-theme="dark"] .nomatch { background: #3B2F12; color: #F6DFA5; border-color: #7A5A14; }
 /* one clear button, ours — hide the browser's built-in search-field ✕ */
 .searchbar input[type="search"]::-webkit-search-cancel-button, .searchbar input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
+/* ---------- ambiguous search: choose a counterparty before totals ---------- */
+.ambig { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: #FFF3D6; color: #5A3B00; border: 1px solid #F0C96B; }
+.ambig-head { font-size: 13.5px; margin-bottom: 6px; }
+.ambig .plist li + li { border-top-color: #F0C96B; }
+.ambig .prow:hover { background: rgb(255 255 255 / 0.45); }
+.ambig .pname, .ambig .pamt { color: #3B2A00; }
+.ambig .pmeta, .ambig .pamt small, .ambig .prank { color: #8A6A1F; }
+.ambig-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; }
+.ambig .btn { background: #5A3B00; color: #FFF3D6; border-color: #5A3B00; }
+.combined-note { padding: 8px 12px; border-radius: 10px; background: #FFF3D6; color: #5A3B00; border: 1px solid #F0C96B; margin-top: 10px; }
+:root:not([data-theme="light"]) .ambig, :root:not([data-theme="light"]) .combined-note { background: #3B2F12; color: #F6DFA5; border-color: #7A5A14; }
+:root:not([data-theme="light"]) .ambig .pname, :root:not([data-theme="light"]) .ambig .pamt { color: #F6DFA5; }
+:root:not([data-theme="light"]) .ambig .pmeta, :root:not([data-theme="light"]) .ambig .pamt small, :root:not([data-theme="light"]) .ambig .prank { color: #C9A25A; }
+:root:not([data-theme="light"]) .ambig .prow:hover { background: rgb(255 255 255 / 0.06); }
+:root:not([data-theme="light"]) .ambig .btn { background: #F6DFA5; color: #3B2F12; border-color: #F6DFA5; }
+:root[data-theme="dark"] .ambig, :root[data-theme="dark"] .combined-note { background: #3B2F12; color: #F6DFA5; border-color: #7A5A14; }
+:root[data-theme="dark"] .ambig .pname, :root[data-theme="dark"] .ambig .pamt { color: #F6DFA5; }
+:root[data-theme="dark"] .ambig .btn { background: #F6DFA5; color: #3B2F12; border-color: #F6DFA5; }
