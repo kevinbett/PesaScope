@@ -12,5 +12,7 @@ jobs:
       # npm ci cannot use a lockfile written on macOS: other-platform optional packages are recorded
       # without versions (npm/cli#4828). npm install resolves them; versions still come from the lock.
       - run: npm install --no-audit --no-fund
+      # npm/cli#4828: the Linux-native rollup build is not in a macOS-written lockfile; add it, pinned to the installed rollup
+      - run: npm install --no-save --no-audit --no-fund "@rollup/rollup-linux-x64-gnu@$(node -p "require('rollup/package.json').version")"
       - run: npm test
       - run: npm run build
