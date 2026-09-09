@@ -3,14 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Google tag (gtag.js) -->
+    <!-- Google tag (gtag.js) — init in /gtag-init.js so the strict CSP (script-src 'self') allows it without 'unsafe-inline' -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-Z1Y8006Q9R"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-Z1Y8006Q9R');
-    </script>
+    <script src="/gtag-init.js"></script>
     <title>PesaScope — your M-Pesa statement, decoded</title>
     <meta name="description" content="Drop your M-PESA statement PDF and see who you send to, who pays you, your spending habits and what M-PESA charges you — parsed entirely in your browser." />
     <meta name="theme-color" content="#1D7A4E" media="(prefers-color-scheme: light)" />
