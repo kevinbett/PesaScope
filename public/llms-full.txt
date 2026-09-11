@@ -1,0 +1,25 @@
+# PesaScope — full description
+
+PesaScope turns Safaricom's password-protected "M-PESA Full Statement" PDF into
+a spending dashboard, processed entirely in the browser. It is privacy-first by
+design: the file is decrypted and parsed on your device with pdf.js, nothing is
+uploaded to any server, and nothing persists after the tab closes (aside from
+optional local aliases and category corrections you choose to keep, stored only
+on your device). No sign-up, no account.
+
+Built by Aevum Labs (https://aevumlabs.site). Free.
+
+## The questions it answers
+- Who do I send money to the most — and who sends me money? Ranked people with count, total, average, fees paid and last date; tap a person for every transaction.
+- What are my spending habits? Plain-language observations: daily rate, big-spend weekday, late-night payments, typical payment size, most-visited merchant, Fuliza usage, fee burden, regular payees.
+- Where does it go? Money grouped by what the payee is — Send money, Received, Buy Goods (Till), PayBill, Bank & cards, Savings & investments, Loans (incl. Timiza/Tala/Zenka-style apps), Fuliza, Insurance, Betting, Airtime & bundles, Cash, Charges.
+- Search anything — a name, masked phone, PayBill/till, account or receipt — and get the matching party's summary plus every sent/received row, fees included.
+- What did it cost me? Every charge row is linked to the transaction it belongs to (same receipt), so fees are attributable.
+
+## Accuracy
+The parser reconciles to the cent against the statement's own SUMMARY totals. If
+a figure doesn't add up, it is surfaced rather than guessed.
+
+## Platform
+Web only, at https://pesascope.site. Works on modern browsers; the statement is
+processed locally, so a private/incognito window is fine.
