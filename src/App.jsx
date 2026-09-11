@@ -75,6 +75,10 @@ export default function App() {
           PesaScope reads Safaricom’s “M-PESA Full Statement” PDF layout. Categories are inferred from
           each row’s details text, so an odd transaction may land in “Other”. This is a personal
           analysis tool, not financial advice, and it is not affiliated with Safaricom.
+          <span className="made-by">
+            Made by{' '}
+            <a href="https://aevumlabs.site/" target="_blank" rel="noopener noreferrer">Aevum Labs</a>.
+          </span>
         </footer>
       </div>
     </>

@@ -69,6 +69,10 @@ h2 { font-family: "Archivo", sans-serif; font-weight: 600; font-size: 16px; marg
 .muted { color: var(--ink-3); font-style: italic; }
 .chart-note, .more-note { color: var(--ink-3); font-size: 12.5px; margin-top: 8px; }
 footer { margin-top: 28px; color: var(--ink-3); font-size: 12.5px; max-width: 68ch; }
+.made-by { display: block; margin-top: 10px; }
+.made-by a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.made-by a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.made-by a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
 svg text { font-family: "IBM Plex Sans", sans-serif; }
 #tooltip {
   position: fixed; pointer-events: none; background: var(--tooltip-bg); color: var(--tooltip-ink); border-radius: 7px; padding: 7px 10px;
