@@ -1,6 +1,10 @@
 // Printable A4 "Income & Affordability Report" generated in-browser from an
 // incomeReport() model. Same brand + CSP-safe popup pattern as receipt.js
 // (handlers attached from the opener, never inline onclick).
+//
+// Deliberately conservative: the headline is REGULAR income only. Other money
+// received and pass-through money are shown separately and clearly labelled, so
+// the figure a lender/landlord/embassy reads is one we can stand behind.
 import { titleCase } from './insights.js'
 
 const kes = n => 'KES ' + Math.round(n || 0).toLocaleString('en-KE')
@@ -10,6 +14,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 const prettyDate = iso => iso ? +iso.slice(8, 10) + ' ' + MONTHS[+iso.slice(5, 7) - 1] + ' ' + iso.slice(0, 4) : '—'
 
 function bars(monthly) {
+  if (!monthly.length) return '<p class="muted">No regular-income months in this period.</p>'
   const max = Math.max(1, ...monthly.map(m => m.income))
   return monthly.map(m => `<div class="mrow">
       <span class="ml">${esc(m.label)}</span>
@@ -19,26 +24,43 @@ function bars(monthly) {
 }
 
 function sourceRows(sources) {
-  if (!sources.length) return '<p class="muted">No named income sources found.</p>'
+  if (!sources.length) return '<p class="muted">No regular income source detected.</p>'
   return sources.map(s => `<div class="srow">
       <span class="sn">${esc(titleCase(s.name))}${s.recurring ? ` <b class="tag">${esc(s.cadence || 'regular')}</b>` : ''}</span>
       <span class="sv">${esc(kes(s.total))}<small>${esc(pct(s.share))}</small></span>
     </div>`).join('')
 }
 
-const exclRow = (label, v) => v > 0 ? `<div class="xrow"><span>${esc(label)}</span><span>${esc(kes(v))}</span></div>` : ''
+const xrow = (label, v, note) => v > 0 ? `<div class="xrow"><span>${esc(label)}${note ? ` <em>${esc(note)}</em>` : ''}</span><span>${esc(kes(v))}</span></div>` : ''
 
 export function incomeReportHtml(r) {
   const name = r.name ? titleCase(r.name) : 'Statement holder'
   const generated = prettyDate(new Date().toISOString().slice(0, 10))
-  const x = r.excluded
-  const excludedHtml = [
-    exclRow('Loans received', x.loans),
-    exclRow('Fuliza (overdraft)', x.fuliza),
-    exclRow('Cash deposits', x.cashIn),
-    exclRow('Savings withdrawn back', x.savings),
-    exclRow('Reversals / refunds', x.reversals),
-    exclRow('One-off bank transfers in', x.bankIn),
+  const o = r.other, x = r.excluded
+
+  const headline = r.hasRegular
+    ? `<div class="cards">
+        <div class="card"><div class="k">Regular monthly income</div><div class="v">${esc(kes(r.regular.avgMonthly))}</div><div class="s">over ${r.period.months} month${r.period.months === 1 ? '' : 's'}</div></div>
+        <div class="card"><div class="k">Regular income total</div><div class="v">${esc(kes(r.regular.total))}</div><div class="s">${r.regular.count} payment${r.regular.count === 1 ? '' : 's'}</div></div>
+        <div class="card"><div class="k">Active months</div><div class="v">${r.regular.activeMonths}</div><div class="s">had regular income</div></div>
+        <div class="card"><div class="k">Stability</div><div class="v">${esc(r.regular.stability.label)}</div><div class="s">month to month</div></div>
+      </div>`
+    : `<div class="callout">No <b>regular</b> income was detected in this statement — no salary or recurring payer with an even rhythm. Money did come in, but as one-off receipts, remittances or transfers. Those are itemised below under <b>Other money received</b>.</div>`
+
+  const otherRows = [
+    xrow('Receipts from people (P2P)', o.p2p.total, o.p2p.payers ? `${o.p2p.n} receipts · ${o.p2p.payers} payers` : ''),
+    xrow('International remittances', o.remittance.total, o.remittance.n ? `${o.remittance.n} receipts` : ''),
+    xrow('Bank transfers in', o.bank.total, o.bank.n ? `${o.bank.n} transfers` : ''),
+    xrow('Other receipts', o.misc.total, o.misc.n ? `${o.misc.n} receipts` : ''),
+  ].join('') || '<div class="xrow muted"><span>None</span><span>—</span></div>'
+
+  const excludedRows = [
+    xrow('Loans received', x.loans),
+    xrow('Fuliza (overdraft)', x.fuliza),
+    xrow('Cash deposits', x.cashIn),
+    xrow('Savings withdrawn back', x.savings),
+    xrow('Betting payouts', x.betting),
+    xrow('Reversals / refunds', x.reversals),
   ].join('') || '<div class="xrow muted"><span>Nothing excluded</span><span>—</span></div>'
 
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Income Report — ${esc(name)}</title>
@@ -64,6 +86,7 @@ export function incomeReportHtml(r) {
   .card .k { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: #1D7A4E; font-weight: 600; }
   .card .v { font-size: 21px; font-weight: 800; letter-spacing: -0.01em; margin-top: 3px; }
   .card .s { font-size: 11px; color: #56605A; margin-top: 2px; }
+  .callout { background: #FBF3E2; border: 1px solid #EBD9A8; border-radius: 12px; padding: 14px 16px; font-size: 13px; line-height: 1.55; margin: 0 0 18px; }
   h2 { font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: #56605A; margin: 20px 0 10px; }
   .mrow, .srow { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px dashed #DCE3DE; font-size: 13px; }
   .ml { width: 92px; color: #56605A; flex: 0 0 auto; }
@@ -76,8 +99,11 @@ export function incomeReportHtml(r) {
   .sv small { display: block; font-weight: 500; color: #7E8880; font-size: 11px; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
   .note { background: #F7F9F7; border: 1px solid #E5E9E5; border-radius: 12px; padding: 14px 16px; }
-  .xrow { display: flex; justify-content: space-between; font-size: 12.5px; padding: 5px 0; border-bottom: 1px dashed #E5E9E5; }
+  .note h3 { margin: 0 0 6px; font-size: 12.5px; letter-spacing: .03em; text-transform: uppercase; color: #56605A; }
+  .note .lead { margin: 0 0 10px; font-size: 12px; line-height: 1.5; color: #56605A; }
+  .xrow { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; padding: 6px 0; border-bottom: 1px dashed #E5E9E5; }
   .xrow:last-child { border-bottom: none; }
+  .xrow em { font-style: normal; color: #7E8880; font-size: 11px; }
   .muted { color: #7E8880; }
   .afford { font-size: 13px; line-height: 1.55; }
   .afford b { font-size: 20px; }
@@ -86,7 +112,7 @@ export function incomeReportHtml(r) {
   .actions { text-align: center; margin: 6px 0 28px; }
   .actions button { font: inherit; font-weight: 600; padding: 10px 20px; border-radius: 999px; border: 1px solid #1D7A4E; background: #1D7A4E; color: #fff; cursor: pointer; margin: 0 5px; }
   .actions button.ghost { background: #fff; color: #1D7A4E; }
-  @media print { @page { size: A4; margin: 14mm; } body { background: #fff; } .sheet { width: auto; max-width: none; margin: 0; box-shadow: none; border-radius: 0; } .actions { display: none; } }
+  @media print { @page { size: A4; margin: 14mm; } body { background: #fff; } .sheet { width: auto; max-width: none; margin: 0; box-shadow: none; border-radius: 0; } .actions { display: none; } .two { gap: 16px; } }
 </style></head><body>
 <div class="sheet">
   <div class="band">
@@ -97,34 +123,36 @@ export function incomeReportHtml(r) {
   <div class="kanga"></div>
   <div class="body">
     <div class="who"><h1>${esc(name)}</h1><span class="p">${esc(r.phone || '')}</span></div>
-    <div class="cards">
-      <div class="card"><div class="k">Avg monthly income</div><div class="v">${esc(kes(r.avgMonthly))}</div><div class="s">over ${r.period.months} month${r.period.months === 1 ? '' : 's'}</div></div>
-      <div class="card"><div class="k">Total income</div><div class="v">${esc(kes(r.totalCounted))}</div><div class="s">${r.counts.incomeTxns} receipts</div></div>
-      <div class="card"><div class="k">Active months</div><div class="v">${r.activeMonths}</div><div class="s">had income</div></div>
-      <div class="card"><div class="k">Stability</div><div class="v">${esc(r.stability.label)}</div><div class="s">month to month</div></div>
-    </div>
 
-    <h2>Monthly income</h2>
-    ${bars(r.monthly)}
+    ${headline}
+
+    ${r.hasRegular ? `<h2>Regular income by month</h2>${bars(r.regular.monthly)}` : ''}
 
     <div class="two">
       <div>
-        <h2>Income sources</h2>
-        ${sourceRows(r.sources)}
+        <h2>Regular income sources</h2>
+        ${sourceRows(r.regular.sources)}
       </div>
       <div>
         <h2>Affordability estimate</h2>
-        <div class="note afford">Based on average monthly income, a sustainable monthly commitment (rent or loan repayment) is around<br><b>${esc(kes(r.affordability.rent))}</b><br><span class="muted">Guide only (≈⅓ of income), not financial advice.</span></div>
+        <div class="note afford">Based on <b style="font-size:13px">regular</b> income, a sustainable monthly commitment (rent or loan repayment) is around<br><b>${esc(kes(r.affordability.rent))}</b><br><span class="muted">Guide only (≈⅓ of regular income), not financial advice.</span></div>
       </div>
     </div>
 
-    <h2>How this was calculated</h2>
-    <div class="note">
-      <p style="margin:0 0 8px;font-size:12.5px;line-height:1.5">Income counts money genuinely received — regular income (salary / a recurring payer) and variable receipts from customers. Money that only passed through your account is <b>excluded</b>, so the figure isn't inflated:</p>
-      ${excludedHtml}
+    <div class="two" style="margin-top:8px">
+      <div class="note">
+        <h3>Other money received</h3>
+        <p class="lead">Money that came in but is <b>not counted</b> as regular income — it may be business float, repayments, remittances or your own funds.</p>
+        ${otherRows}
+      </div>
+      <div class="note">
+        <h3>Not counted — passed through</h3>
+        <p class="lead">Borrowed or your own money moving around. Excluded so income isn't inflated.</p>
+        ${excludedRows}
+      </div>
     </div>
   </div>
-  <div class="foot"><strong>Prepared by PesaScope on this device from the account holder's own M-PESA statement.</strong> Figures are computed locally and self-reported — this is not an official Safaricom document, a credit score, or financial advice. Amounts reconcile to the statement's own totals.</div>
+  <div class="foot"><strong>Prepared by PesaScope on this device from the account holder's own M-PESA statement.</strong> "Regular income" counts only salary and recurring payers; other receipts and pass-through money are listed separately and excluded from it. This is not an official Safaricom document, a credit score, or financial advice. Figures are computed locally and reconcile to the statement's own totals.</div>
 </div>
 <div class="actions"><button id="print">Print / Save as PDF</button><button class="ghost" id="close">Close</button></div>
 </body></html>`

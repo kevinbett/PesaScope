@@ -1,6 +1,14 @@
 // Income & affordability model built from parsed M-PESA transactions.
-// PURE (no DOM, no pdf.js). The accuracy core of the Income Report: separate real
-// income from money that merely passed through (loans, Fuliza, own deposits, reversals).
+// PURE (no DOM, no pdf.js).
+//
+// Design (deliberately CONSERVATIVE — a report a lender/landlord/embassy can trust):
+//   • "Regular income" is the headline and counts only money we are confident is earned:
+//     inflows from a recurring source (same payer, even cadence) plus explicit "Salary Payment".
+//   • Everything else that came in — one-off P2P receipts, international remittances, bank
+//     transfers — is shown as "Other money received", clearly labelled and NOT in the headline,
+//     because on a busy account it may be business float, repayments, remittances or your own funds.
+//   • Money that merely passed through (loans, Fuliza, cash deposits, savings withdrawn back,
+//     reversals, betting payouts) is excluded entirely and listed for transparency.
 import { brandKey } from './parser-core.js'
 import { monthLbl } from './format.js'
 
@@ -12,19 +20,15 @@ export const NON_INCOME_IN = new Set([
   'Savings & investments', // your own money coming back (M-Shwari/MMF withdrawals)
   'Refunds & reversals',   // money returned, not earned
   'Charges & fees',        // never an inflow that matters
+  'Betting',               // a bookmaker payout is not income (SportPesa B2C etc.)
 ])
+
+const PAYROLL = /^salary payment/i          // explicit payroll — regular income even if seen once
+const INTL = /^receive international/i       // inbound remittance — shown, but not headline income
 
 const median = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : 0 }
 const sum = a => a.reduce((x, y) => x + y, 0)
 const srcKey = t => t.key || brandKey(t.who) || (t.code ? 'code:' + t.code : 'who:' + (t.who || '?'))
-
-// An inflow whose wording marks it as genuinely earned: an employer/business
-// payout, a salary run, or an inbound international remittance. These count as
-// income even when they arrive under the coarse "Bank & cards" category — which
-// otherwise also holds plain "Transfer from Bank" moves that may be your own money.
-// (Loans like "Business Payment from Tala" are already filtered out by category.)
-const EARNED_WORDING = /^(business payment|salary payment|receive international)/i
-const earnedLooking = t => t.cat === 'Received' || EARNED_WORDING.test(t.details || '')
 
 /** months spanned between two 'YYYY-MM-DD' dates, inclusive (min 1) */
 function monthsSpanned(from, to) {
@@ -36,8 +40,7 @@ function monthsSpanned(from, to) {
 
 /**
  * Group candidate inflows by source and keep those with a regular rhythm
- * (>=3 receipts across >=2 months, even cadence <= 45 days). Mirrors the
- * subscriptions() detector but for money coming IN — this is salary / a regular client.
+ * (>=3 receipts across >=2 months, even cadence <= 45 days) — a salary or a regular client.
  * @returns {Map<string,{cadence,gapDays}>} keyed by source
  */
 function recurringSources(cands) {
@@ -61,11 +64,12 @@ function recurringSources(cands) {
   return out
 }
 
+const tier = arr => ({ total: sum(arr.map(t => t.paidIn)), n: arr.length })
+
 /**
  * Build the income report model.
  * @param {Array} txns  parsed + enriched transactions
  * @param {Object} meta statement meta ({name, phone, period})
- * @returns model consumed by IncomeReport.jsx / incomeReportDoc.js
  */
 export function incomeReport(txns, meta = {}) {
   const real = (txns || []).filter(t => !t.isCharge)
@@ -73,45 +77,28 @@ export function incomeReport(txns, meta = {}) {
   const from = dates[0] || null, to = dates[dates.length - 1] || null
   const months = monthsSpanned(from, to)
 
-  // 1. candidate inflows: money in, not a known pass-through
   const inflows = real.filter(t => t.paidIn > 0)
   const cands = inflows.filter(t => !NON_INCOME_IN.has(t.cat))
-
-  // 2. recurring sources → confident income regardless of channel (Received or bank)
   const rec = recurringSources(cands)
 
-  // 3. classify every candidate
-  const counted = []          // headline income
-  let bankIn = 0, otherIn = 0 // shown but excluded from headline (may be own funds / one-off)
+  // classify every candidate inflow into one confident bucket
+  const regular = []
+  const other = { p2p: [], remittance: [], bank: [], misc: [] }
   for (const t of cands) {
-    const isRec = rec.has(srcKey(t))
-    if (isRec || earnedLooking(t)) counted.push(t)
-    else if (t.cat === 'Bank & cards') bankIn += t.paidIn   // plain bank transfer — may be own funds
-    else otherIn += t.paidIn
+    if (rec.has(srcKey(t)) || PAYROLL.test(t.details || '')) regular.push(t)
+    else if (INTL.test(t.details || '')) other.remittance.push(t)
+    else if (t.cat === 'Received') other.p2p.push(t)
+    else if (t.cat === 'Bank & cards') other.bank.push(t)
+    else other.misc.push(t)
   }
 
-  // 4. transparency: what we deliberately did not count
-  const bucket = cat => sum(inflows.filter(t => t.cat === cat).map(t => t.paidIn))
-  const excluded = {
-    bankIn, otherIn,
-    loans: bucket('Loans'), fuliza: bucket('Fuliza'), cashIn: bucket('Cash in'),
-    savings: bucket('Savings & investments'), reversals: bucket('Refunds & reversals'),
-  }
-
-  // 5. monthly counted income + stability
+  // ---- headline: regular income ----
+  const totalRegular = sum(regular.map(t => t.paidIn))
   const mMap = new Map()
-  for (const t of counted) {
-    const k = t.date.slice(0, 7)
-    mMap.set(k, (mMap.get(k) || 0) + t.paidIn)
-  }
+  for (const t of regular) { const k = t.date.slice(0, 7); mMap.set(k, (mMap.get(k) || 0) + t.paidIn) }
   const monthly = [...mMap.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))
     .map(([key, income]) => ({ key, label: monthLbl(key), income }))
-  const totalCounted = sum(counted.map(t => t.paidIn))
-  const activeMonths = monthly.length
-  const avgMonthly = totalCounted / months
-  const recurringTotal = sum(counted.filter(t => rec.has(srcKey(t))).map(t => t.paidIn))
-  const variableTotal = totalCounted - recurringTotal
-
+  const avgMonthly = totalRegular / months
   const vals = monthly.map(m => m.income)
   const mean = vals.length ? sum(vals) / vals.length : 0
   const cv = mean > 0 && vals.length > 1
@@ -120,32 +107,46 @@ export function incomeReport(txns, meta = {}) {
     cv,
     label: vals.length < 2 ? 'Too short to tell' : cv < 0.35 ? 'Stable' : cv < 0.75 ? 'Variable' : 'Irregular',
   }
-
-  // 6. top sources (masked names come straight from the statement)
   const sMap = new Map()
-  for (const t of counted) {
+  for (const t of regular) {
     const k = srcKey(t)
     const s = sMap.get(k) || { key: k, name: t.who || 'Unknown', total: 0, n: 0, recurring: rec.has(k), cadence: rec.get(k)?.cadence || null }
     s.total += t.paidIn; s.n++; s.name = t.who || s.name
     sMap.set(k, s)
   }
   const sources = [...sMap.values()].sort((a, b) => b.total - a.total).slice(0, 6)
-    .map(s => ({ ...s, share: totalCounted ? s.total / totalCounted : 0 }))
+    .map(s => ({ ...s, share: totalRegular ? s.total / totalRegular : 0 }))
 
-  // 7. context: overall in/out and affordability estimate (1/3 of average income)
+  // ---- other money received (shown, not counted) ----
+  const otherModel = {
+    total: sum([...other.p2p, ...other.remittance, ...other.bank, ...other.misc].map(t => t.paidIn)),
+    p2p: { ...tier(other.p2p), payers: new Set(other.p2p.map(srcKey)).size },
+    remittance: tier(other.remittance),
+    bank: tier(other.bank),
+    misc: tier(other.misc),
+  }
+
+  // ---- excluded pass-through ----
+  const bucket = cat => sum(inflows.filter(t => t.cat === cat).map(t => t.paidIn))
+  const excluded = {
+    loans: bucket('Loans'), fuliza: bucket('Fuliza'), cashIn: bucket('Cash in'),
+    savings: bucket('Savings & investments'), reversals: bucket('Refunds & reversals'),
+    betting: bucket('Betting'),
+  }
+
   const totalIn = sum(inflows.map(t => t.paidIn))
   const totalOut = sum(real.filter(t => t.withdrawn > 0).map(t => t.withdrawn))
-  const net = { totalIn, totalOut, monthlyNet: (totalIn - totalOut) / months }
-  const affordability = { rent: avgMonthly / 3 }
 
   return {
-    ok: counted.length > 0,
+    ok: totalIn > 0,
+    hasRegular: totalRegular > 0,
     name: (meta.name || '').trim(),
     phone: meta.phone || '',
     period: { from, to, months },
-    avgMonthly, totalCounted, activeMonths,
-    recurringTotal, variableTotal,
-    stability, monthly, sources, affordability, excluded, net,
-    counts: { incomeTxns: counted.length },
+    regular: { total: totalRegular, avgMonthly, activeMonths: monthly.length, count: regular.length, stability, monthly, sources },
+    other: otherModel,
+    excluded,
+    totals: { received: totalIn, out: totalOut },
+    affordability: { rent: avgMonthly / 3 },   // conservative: from regular income only
   }
 }
