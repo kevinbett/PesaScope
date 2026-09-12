@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchTerms } from '../lib/useSearchTerms.js'
 import { fmt, monthOf, monthLbl } from '../lib/format.js'
 import { buildPeople, topSentTo, topReceivedFrom, topMerchants, categoryTotals, habits, search, chargesReport, splitTerms, buildIndex, monthlyTrends, subscriptions, reviewItems } from '../lib/insights.js'
+import { incomeReport } from '../lib/income.js'
 import { useTooltip } from './Tooltip.jsx'
 import HBars from './HBars.jsx'
 import FlowChart from './FlowChart.jsx'
@@ -16,6 +17,7 @@ import SearchBox from './SearchBox.jsx'
 import Tiles from './Tiles.jsx'
 import FilterStrip from './FilterStrip.jsx'
 import Trends from './Trends.jsx'
+import IncomeReport from './IncomeReport.jsx'
 import Subscriptions from './Subscriptions.jsx'
 import Review from './Review.jsx'
 import Settings from './Settings.jsx'
@@ -46,6 +48,7 @@ export default function Dashboard({ data, isSample, onLoadOwn, mem, onRemoveStat
   const trends = useMemo(() => monthlyTrends(data.txns), [data])          // whole statement, every month
   const subs = useMemo(() => subscriptions(data.txns), [data])
   const review = useMemo(() => reviewItems(data.txns), [data])
+  const income = useMemo(() => incomeReport(data.txns, data.meta), [data])   // whole statement
   const catTotal = cats.out.reduce((s, [, v]) => s + v, 0) || 1
 
   useEffect(() => { setCat('') }, [q])
@@ -105,7 +108,7 @@ export default function Dashboard({ data, isSample, onLoadOwn, mem, onRemoveStat
 
       {!result && (
         <nav className="jumpbar" aria-label="Jump to section">
-          {[['overview', 'Overview'], ['transactions', 'Transactions'], ['people', 'People'], ['habits', 'Habits'], ['merchants', 'Merchants'], ['regular', 'Regular'], ['trends', 'Months'], ['charges', 'Charges'], ['review', 'Review']].map(([id, l]) => (
+          {[['overview', 'Overview'], ['income', 'Income'], ['transactions', 'Transactions'], ['people', 'People'], ['habits', 'Habits'], ['merchants', 'Merchants'], ['regular', 'Regular'], ['trends', 'Months'], ['charges', 'Charges'], ['review', 'Review']].map(([id, l]) => (
             <button key={id} className="jump" onClick={() => jump(id)}>{l}</button>
           ))}
         </nav>
@@ -133,6 +136,8 @@ export default function Dashboard({ data, isSample, onLoadOwn, mem, onRemoveStat
               <p className="chart-note">In and out per day, week or month depending on the span. Hover or tap a bar.</p>
             </section>
           </div>
+
+          <IncomeReport model={income} defaultName={m.name} />
 
           <Section id="transactions" title="Transactions" innerRef={txnsRef}>
             <TxnTable txns={txns} cat={cat} setCat={setCat} onPick={pick} meta={data.meta} context={monthKey === 'all' ? '' : monthLbl(monthKey)} />
