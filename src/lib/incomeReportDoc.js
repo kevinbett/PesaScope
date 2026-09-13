@@ -112,6 +112,20 @@ export function incomeReportHtml(r) {
   .actions { text-align: center; margin: 6px 0 28px; }
   .actions button { font: inherit; font-weight: 600; padding: 10px 20px; border-radius: 999px; border: 1px solid #1D7A4E; background: #1D7A4E; color: #fff; cursor: pointer; margin: 0 5px; }
   .actions button.ghost { background: #fff; color: #1D7A4E; }
+  .xrow > span:last-child { white-space: nowrap; }
+  /* on-screen mobile (a phone previewing before printing) — stack the columns so
+     nothing wraps one word per line; print keeps the A4 layout below */
+  @media screen and (max-width: 640px) {
+    .sheet { border-radius: 12px; margin: 12px auto; }
+    .band { padding: 16px 18px; flex-wrap: wrap; }
+    .meta { margin-left: 0; text-align: left; width: 100%; margin-top: 4px; }
+    .body { padding: 18px 18px 6px; }
+    .cards { grid-template-columns: repeat(2, 1fr); }
+    .two { grid-template-columns: 1fr; gap: 14px; }
+    .who h1 { font-size: 18px; }
+    h2 { margin: 16px 0 8px; }
+    .afford b { font-size: 18px; }
+  }
   @media print { @page { size: A4; margin: 14mm; } body { background: #fff; } .sheet { width: auto; max-width: none; margin: 0; box-shadow: none; border-radius: 0; } .actions { display: none; } .two { gap: 16px; } }
 </style></head><body>
 <div class="sheet">
