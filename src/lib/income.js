@@ -26,6 +26,14 @@ export const NON_INCOME_IN = new Set([
 const PAYROLL = /^salary payment/i          // explicit payroll — regular income even if seen once
 const INTL = /^receive international/i       // inbound remittance — shown, but not headline income
 
+// A payer that is a bank/SACCO. A *recurring* inflow from a bank is almost never
+// salary — it's you moving your own money in (bank→M-PESA), a loan, or a facility —
+// so it must NOT be promoted to "regular income" just because it repeats. It stays
+// under "bank transfers in". (Genuine payroll still counts via PAYROLL wording, and a
+// recurring non-bank employer/client still counts.)
+const BANK = /\b(bank|sacco|chartered|stanchart|equity|kcb|absa|stanbic|ncba|co-?op|cooperative|dtb|i\s*&\s*m|imbank|sbm|sidian|ecobank|gulf\s*african|diamond\s*trust)\b/i
+const looksLikeBank = t => BANK.test(t.who || '') || BANK.test(t.details || '')
+
 const median = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : 0 }
 const sum = a => a.reduce((x, y) => x + y, 0)
 const srcKey = t => t.key || brandKey(t.who) || (t.code ? 'code:' + t.code : 'who:' + (t.who || '?'))
@@ -85,7 +93,8 @@ export function incomeReport(txns, meta = {}) {
   const regular = []
   const other = { p2p: [], remittance: [], bank: [], misc: [] }
   for (const t of cands) {
-    if (rec.has(srcKey(t)) || PAYROLL.test(t.details || '')) regular.push(t)
+    const regularByRhythm = rec.has(srcKey(t)) && !looksLikeBank(t)   // recurring, but not a bank source
+    if (PAYROLL.test(t.details || '') || regularByRhythm) regular.push(t)
     else if (INTL.test(t.details || '')) other.remittance.push(t)
     else if (t.cat === 'Received') other.p2p.push(t)
     else if (t.cat === 'Bank & cards') other.bank.push(t)

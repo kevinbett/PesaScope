@@ -77,6 +77,29 @@ describe('incomeReport (tiered / conservative)', () => {
     expect(r2.hasRegular).toBe(true)
   })
 
+  it('does NOT count a recurring BANK inflow as regular income (self-funding, not salary)', () => {
+    // "Business Payment from STANDARD CHARTERED BANK" repeating fortnightly is you
+    // moving your own money in — must land under bank transfers, never as salary.
+    const r = incomeReport([
+      mk('2026-07-04', 'Bank & cards', 10000, { who: 'STANDARD CHARTERED BANK', key: 'scb', details: 'Business Payment from 329299 - STANDARD CHARTERED BANK via API' }),
+      mk('2026-07-17', 'Bank & cards', 5000, { who: 'STANDARD CHARTERED BANK', key: 'scb', details: 'Business Payment from 329299 - STANDARD CHARTERED BANK via API' }),
+      mk('2026-07-30', 'Bank & cards', 40000, { who: 'STANDARD CHARTERED BANK', key: 'scb', details: 'Business Payment from 329299 - STANDARD CHARTERED BANK via API' }),
+    ], {})
+    expect(r.hasRegular).toBe(false)
+    expect(r.regular.total).toBe(0)
+    expect(r.other.bank.total).toBe(55000)
+  })
+
+  it('still counts a recurring NON-bank employer/client as regular income', () => {
+    const r = incomeReport([
+      mk('2026-06-01', 'Received', 20000, { who: 'ACME LTD', key: 'acme' }),
+      mk('2026-07-01', 'Received', 20000, { who: 'ACME LTD', key: 'acme' }),
+      mk('2026-08-01', 'Received', 20000, { who: 'ACME LTD', key: 'acme' }),
+    ], {})
+    expect(r.hasRegular).toBe(true)
+    expect(r.regular.total).toBe(60000)
+  })
+
   it('flags no regular income when inflows are all one-off / pass-through', () => {
     const r3 = incomeReport([
       mk('2026-06-10', 'Received', 3000, { key: 'a' }),   // one-off P2P
